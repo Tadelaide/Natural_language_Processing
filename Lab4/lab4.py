@@ -79,15 +79,22 @@ class perceptron:
             print("the average negtive file number is ",trueNegtive.sum()/self.multipalPass)
             print("the average positive file number is ",truePositive.sum()/self.multipalPass)
             print("total is", trueCorrect/self.multipalPass)
-            #plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
-            #plt.show()
+            plt.figure(figsize=(12,6)) 
+            plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            plt.title("the accuracy of average multipal pass")
+            plt.xlabel("time")
+            plt.ylabel("accuracy")
+            plt.show()
             return trueCorrect/400/self.multipalPass
         else:
             print("the negtive file number is ",trueNegtive.sum())
             print("the positive file number is ",truePositive.sum())
             print("total is", trueCorrect)
-            #plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
-            #plt.show()
+            plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            plt.title("the accuracy of multipal pass")
+            plt.xlabel("time")
+            plt.ylabel("accuracy")
+            plt.show()
             return trueCorrect/400
     
     #to update every weight into a final weight
@@ -162,7 +169,7 @@ if __name__ == '__main__':
     start = timeit.default_timer()
     config = CommandLine()
     shuffle = 1
-    multipalPass = 10
+    multipalPass = 2
     average = True
     Model = {'binary': False, 'bigram': True, 'otherMehod': False}
     binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model)
