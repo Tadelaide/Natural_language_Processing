@@ -75,22 +75,37 @@ class perceptron:
         trueNeg,truePos = self.getResult()
         truePositive = np.array(truePos)
         trueNegtive = np.array(trueNeg)
-        trueCorrect =  trueNegtive.sum()+truePositive.sum() 
+        trueCorrect =  trueNegtive.sum()+truePositive.sum()
+        top10Neg = sorted(self.weight, key = lambda p : self.weight[p])[:10]
+        top10Pos = sorted(self.weight, key = lambda p : self.weight[p], reverse=True)[:10]
+        #To print the result
         if self.average :
             print("the average negtive file number is ",trueNegtive.sum()/self.multipalPass)
             print("the average positive file number is ",truePositive.sum()/self.multipalPass)
             print("total is", trueCorrect/self.multipalPass)
-            # plt.figure(figsize=(12,6)) 
-            # plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
-            # plt.title("the accuracy of average multipal pass")
-            # plt.xlabel("time")
-            # plt.ylabel("accuracy")
-            # plt.show()
+            print("Negtive Word Top 10 is")
+            for item in top10Neg:
+                print(item, self.weight[item])
+            print("Positive Word Top 10 is")
+            for item in top10Pos:
+                print(item, self.weight[item])
+            plt.figure(figsize=(12,6)) 
+            plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            plt.title("the accuracy of average multipal pass")
+            plt.xlabel("time")
+            plt.ylabel("accuracy")
+            plt.show()
             return trueCorrect/400/self.multipalPass
         else:
             print("the negtive file number is ",trueNegtive.sum())
             print("the positive file number is ",truePositive.sum())
             print("total is", trueCorrect)
+            print("Negtive Word Top 10 is")
+            for item in top10Neg:
+                print(item, self.weight[item])
+            print("Positive Word Top 10 is")
+            for item in top10Pos:
+                print(item, self.weight[item])
             plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
             plt.title("the accuracy of multipal pass")
             plt.xlabel("time")
@@ -154,7 +169,7 @@ class perceptron:
                     model = self.makeModel(infile)
                     if not (self.predict(model,self.weight)):
                         Neg += 1
-            truePos.append(Pos)#每次的正确的 positive 文件数组成的数列
+            truePos.append(Pos)#to record the 
             trueNeg.append(Neg)
         return trueNeg, truePos    
 
@@ -162,18 +177,16 @@ class perceptron:
         if self.Model['binary'] :
             return Counter(re.sub("[^\w']"," ", openfile.read()).split())
         if self.Model['bigram'] :
-            return Counter(nltk.bigrams(re.sub("[^\w']"," ", openfile.read()).split()), pad_left=True, pad_right=True)
+            bigrams = []
+            for line in openfile:
+                bigrams.extend(nltk.bigrams(re.sub("[^\w']"," ", line).split(), pad_left=True, pad_right=True))
+            return Counter(bigrams)
         if self.Model['otherMethod']:
-            #start1 = timeit.default_timer()
             #I have try use the tag of the spacy, but it take a very long time to a file
             #I give up this method
-            
             is_adjective = lambda pos: pos[:2] == 'JJ'
             word = [word for (word, pos) in nltk.pos_tag(nltk.word_tokenize(openfile.read())) if is_adjective(pos)] 
-            
 
-            #elapsed1 = timeit.default_timer() - start1
-            #print("the program use ",elapsed1," to finish")
             return Counter(word)
              
 
@@ -183,9 +196,9 @@ if __name__ == '__main__':
     start = timeit.default_timer()
     config = CommandLine()
     shuffle = 1
-    multipalPass = 10
+    multipalPass = 1
     average = True
-    Model = {'binary': False, 'bigram': False, 'otherMethod': True}
+    Model = {'binary': False, 'bigram': True, 'otherMethod': False}
     binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
