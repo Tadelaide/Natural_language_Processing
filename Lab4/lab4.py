@@ -36,12 +36,14 @@ class CommandLine:
         sys.exit()
 
 class perceptron:
-    def __init__(self, folderName, shuffle, multipalPass, average):
+    def __init__(self, folderName, shuffle, multipalPass, average, Model):
         self.folderName = folderName
         self.shuffle = shuffle
         self.multipalPass = multipalPass
         self.average = average
+        self.Model = Model
         self.weight = {}
+        
         
     #to update the weight for every iteration
     def update(self, binary, Weight, subjective):
@@ -77,15 +79,15 @@ class perceptron:
             print("the average negtive file number is ",trueNegtive.sum()/self.multipalPass)
             print("the average positive file number is ",truePositive.sum()/self.multipalPass)
             print("total is", trueCorrect/self.multipalPass)
-            plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
-            plt.show()
+            #plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            #plt.show()
             return trueCorrect/400/self.multipalPass
         else:
             print("the negtive file number is ",trueNegtive.sum())
             print("the positive file number is ",truePositive.sum())
             print("total is", trueCorrect)
-            plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
-            plt.show()
+            #plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            #plt.show()
             return trueCorrect/400
     
     #to update every weight into a final weight
@@ -98,6 +100,7 @@ class perceptron:
                 weight[item] = value/multipalPass
         self.weight = weight
 
+
     def getResult(self):
         folderName = self.folderName
         shuffle = self.shuffle
@@ -105,7 +108,6 @@ class perceptron:
         neg_filenames = glob.glob(folderName+'/txt_sentoken/neg/*')
         truePos = []
         trueNeg = []
-
         for j in range(self.multipalPass):
             Pos = 0
             Neg = 0
@@ -120,52 +122,52 @@ class perceptron:
                 neg_filename = neg_filenames[i]
                 #After I check the lecture I change the solution
                 #separate = re.compile("\w+\'?\w+")
-                #    print(Counter(separate.findall(infile.read())))
+                #print(Counter(separate.findall(infile.read())))
                 with open(pos_filename,'r') as infile:
-                #I have test several times which shows that without lower(), the result is better
-                    binary = Counter(re.sub("[^\w']"," ", infile.read()).split())
-                    if not (self.predict(binary, Weight)):
-                        Weight = self.update(binary, Weight, True)
+                    model = self.makeModel(infile)
+                    if not (self.predict(model, Weight)):
+                        Weight = self.update(model, Weight, True)
                 with open(neg_filename,'r') as infile:
-                    binary = Counter(re.sub("[^\w']"," ", infile.read()).split())
-                    if (self.predict(binary, Weight)):
-                        Weight = self.update(binary, Weight, False)
-            
+                    model = self.makeModel(infile)
+                    if (self.predict(model, Weight)):
+                        Weight = self.update(model, Weight, False)
             #to get the multipal pass Weight which is a average Weight
             self.updateMulWeight(Weight)
-
             for i in range(200):
                 pos_rest_filename = pos_filenames[999-i]
                 neg_rest_filename = neg_filenames[999-i]
                 with open(pos_rest_filename,'r') as infile:
-                    binary = Counter(re.sub("[^\w']"," ", infile.read()).split())
-                    if(self.predict(binary,self.weight)):
+                    model = self.makeModel(infile)
+                    if(self.predict(model,self.weight)):
                         Pos += 1
-                
                 with open(neg_rest_filename,'r') as infile:
-                    binary = Counter(re.sub("[^\w']"," ", infile.read()).split())
-                    if not (self.predict(binary,self.weight)):
+                    model = self.makeModel(infile)
+                    if not (self.predict(model,self.weight)):
                         Neg += 1
-            truePos.append(Pos)
+            truePos.append(Pos)#每次的正确的 positive 文件数组成的数列
             trueNeg.append(Neg)
         return trueNeg, truePos    
 
+    def makeModel(self, openfile):
+        if self.Model['binary'] :
+            return Counter(re.sub("[^\w']"," ", openfile.read()).split())
+        if self.Model['bigram'] :
+            return Counter(nltk.bigrams(re.sub("[^\w']"," ", openfile.read()).split()), pad_left=True, pad_right=True)
 
         
 
 
         
 if __name__ == '__main__':
+    start = timeit.default_timer()
     config = CommandLine()
     shuffle = 1
-    multipalPass = 2
+    multipalPass = 10
     average = True
-    binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average)
+    Model = {'binary': False, 'bigram': True, 'otherMehod': False}
+    binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
-    import pylab as plt
-    #x = [1,2,3,4,5,6,7,8,9]
-    #y = [9,8,7,6,5,4,3,2,1]
-    #plt.plot(x,y,'rx')
-    #plt.show()
+    elapsed = timeit.default_timer() - start
+    print("the program use ",elapsed," to finish")
 
