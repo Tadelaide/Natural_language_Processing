@@ -15,6 +15,7 @@ import sys, getopt, re, nltk, timeit, glob, random
 from collections import Counter
 import pylab as plt
 import numpy as np
+import spacy
 
 class CommandLine:
     def __init__(self):
@@ -79,12 +80,12 @@ class perceptron:
             print("the average negtive file number is ",trueNegtive.sum()/self.multipalPass)
             print("the average positive file number is ",truePositive.sum()/self.multipalPass)
             print("total is", trueCorrect/self.multipalPass)
-            plt.figure(figsize=(12,6)) 
-            plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
-            plt.title("the accuracy of average multipal pass")
-            plt.xlabel("time")
-            plt.ylabel("accuracy")
-            plt.show()
+            # plt.figure(figsize=(12,6)) 
+            # plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            # plt.title("the accuracy of average multipal pass")
+            # plt.xlabel("time")
+            # plt.ylabel("accuracy")
+            # plt.show()
             return trueCorrect/400/self.multipalPass
         else:
             print("the negtive file number is ",trueNegtive.sum())
@@ -122,8 +123,10 @@ class perceptron:
             #this part is to shuffle the data,
             #every time I shuffle the data and I will update the weight and test corrected number
             if shuffle == 1 :
-                random.shuffle(pos_filenames)
-                random.shuffle(neg_filenames)
+                for q in range(self.multipalPass):
+                    random.seed(q)
+                    random.shuffle(pos_filenames)
+                    random.shuffle(neg_filenames)
             for i in range(800):
                 pos_filename = pos_filenames[i]
                 neg_filename = neg_filenames[i]
@@ -160,8 +163,19 @@ class perceptron:
             return Counter(re.sub("[^\w']"," ", openfile.read()).split())
         if self.Model['bigram'] :
             return Counter(nltk.bigrams(re.sub("[^\w']"," ", openfile.read()).split()), pad_left=True, pad_right=True)
+        if self.Model['otherMethod']:
+            #start1 = timeit.default_timer()
+            #I have try use the tag of the spacy, but it take a very long time to a file
+            #I give up this method
+            
+            is_adjective = lambda pos: pos[:2] == 'JJ'
+            word = [word for (word, pos) in nltk.pos_tag(nltk.word_tokenize(openfile.read())) if is_adjective(pos)] 
+            
 
-        
+            #elapsed1 = timeit.default_timer() - start1
+            #print("the program use ",elapsed1," to finish")
+            return Counter(word)
+             
 
 
         
@@ -169,9 +183,9 @@ if __name__ == '__main__':
     start = timeit.default_timer()
     config = CommandLine()
     shuffle = 1
-    multipalPass = 2
+    multipalPass = 10
     average = True
-    Model = {'binary': False, 'bigram': True, 'otherMehod': False}
+    Model = {'binary': False, 'bigram': False, 'otherMethod': True}
     binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
