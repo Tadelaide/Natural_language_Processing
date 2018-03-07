@@ -5,7 +5,7 @@
 USE: python <PROGNAME>  review_polarity
 OPTIONS:
     -h : print this help message
-    
+    review_polarity: review_polarity_split(the one that has the training test split)
 Created on Thu Mar 4 2018
 
 @author: wlt
@@ -38,13 +38,15 @@ class CommandLine:
         sys.exit()
 
 class perceptron:
-    def __init__(self, folderName, shuffle, multipalPass, average, Model):
+    def __init__(self, folderName, shuffle, multipalPass, average, Model, time):
         self.folderName = folderName
         self.shuffle = shuffle
         self.multipalPass = multipalPass
         self.average = average
         self.Model = Model
+        self.time = time
         self.weight = {}
+        
         
         
     #to update the weight for every iteration
@@ -73,7 +75,11 @@ class perceptron:
 
         #get the evaluation information
     def evaluation(self):
-        trueNeg,truePos = self.getResult()
+        #if  self.Model['binary'] or self.Model['bigram'] or self.Model['trigram']:
+        #    trueNeg,truePos = self.getNgramsResult()
+        #else:
+        #    trueNeg,truePos = self.getadjectiveResult()
+        trueNeg,truePos = self.getadjectiveResult()
         truePositive = np.array(truePos)
         trueNegtive = np.array(trueNeg)
         trueCorrect =  trueNegtive.sum()+truePositive.sum()
@@ -90,8 +96,11 @@ class perceptron:
             print("Positive Word Top 10 is")
             for item in top10Pos:
                 print(item, self.weight[item])
-            plt.figure(figsize=(12,6)) 
+            elapsedResult = timeit.default_timer() - self.time
+            print("the program use ", elapsedResult, "to finish")
+            plt.figure(figsize=(6,6)) 
             plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            plt.plot(self.multipalPass+1,trueCorrect/400/self.multipalPass,'b+')
             plt.title("the accuracy of average multipal pass")
             plt.xlabel("time")
             plt.ylabel("accuracy")
@@ -108,6 +117,7 @@ class perceptron:
             for item in top10Pos:
                 print(item, self.weight[item])
             plt.plot(np.arange(self.multipalPass),(trueNegtive+truePositive)/400,'rx')
+            plt.plot(np.arange(int(self.multipalPass)+1),trueCorrect/400/self.multipalPass,'b+')
             plt.title("the accuracy of multipal pass")
             plt.xlabel("time")
             plt.ylabel("accuracy")
@@ -124,12 +134,17 @@ class perceptron:
                 weight[item] = value/multipalPass
         self.weight = weight
 
-
-    def getResult(self):
+    #I give up this method because it take a very long time and it can not process the data before train
+    #It was written too fixed
+    '''
+    #this method is not considerd the process the txt before to get weight,so I almost give up it
+    def getNgramsResult(self):
         folderName = self.folderName
         shuffle = self.shuffle
-        pos_filenames = glob.glob(folderName+'/txt_sentoken/pos/*')
-        neg_filenames = glob.glob(folderName+'/txt_sentoken/neg/*')
+        pos_train_filenames = glob.glob(folderName+'/txt_sentoken/pos/train/*')
+        neg_train_filenames = glob.glob(folderName+'/txt_sentoken/neg/train/*')
+        pos_test_filenames = glob.glob(folderName+'/txt_sentoken/pos/test/*')
+        neg_test_filenames = glob.glob(folderName+'/txt_sentoken/neg/test/*')
         truePos = []
         trueNeg = []
         for j in range(self.multipalPass):
@@ -139,22 +154,21 @@ class perceptron:
             #this part is to shuffle the data,
             #every time I shuffle the data and I will update the weight and test corrected number
             if shuffle == 1 :
-                for q in range(self.multipalPass):
-                    random.seed(q)
-                    random.shuffle(pos_filenames)
-                    random.shuffle(neg_filenames)
+                random.seed(j)
+                random.shuffle(pos_train_filenames)
+                random.shuffle(neg_train_filenames)
             #choose the first 800 file as train data
             for i in range(800):
-                pos_filename = pos_filenames[i]
-                neg_filename = neg_filenames[i]
+                pos_train_filename = pos_train_filenames[i]
+                neg_train_filename = neg_train_filenames[i]
                 #After I check the lecture I change the solution
                 #separate = re.compile("\w+\'?\w+")
                 #print(Counter(separate.findall(infile.read())))
-                with open(pos_filename,'r') as infile:
+                with open(pos_train_filename,'r') as infile:
                     model = self.makeModel(infile)
                     if not (self.predict(model, Weight)):
                         Weight = self.update(model, Weight, True)
-                with open(neg_filename,'r') as infile:
+                with open(neg_train_filename,'r') as infile:
                     model = self.makeModel(infile)
                     if (self.predict(model, Weight)):
                         Weight = self.update(model, Weight, False)
@@ -162,23 +176,104 @@ class perceptron:
             self.updateMulWeight(Weight)
             #choose the rest 200 file as train data
             for i in range(200):
-                pos_rest_filename = pos_filenames[999-i]
-                neg_rest_filename = neg_filenames[999-i]
-                with open(pos_rest_filename,'r') as infile:
+                pos_test_filename = pos_test_filenames[i]
+                neg_test_filename = neg_test_filenames[i]
+                with open(pos_test_filename,'r') as infile:
                     model = self.makeModel(infile)
                     if(self.predict(model,self.weight)):
                         Pos += 1
-                with open(neg_rest_filename,'r') as infile:
+                with open(neg_test_filename,'r') as infile:
                     model = self.makeModel(infile)
                     if not (self.predict(model,self.weight)):
                         Neg += 1
             truePos.append(Pos)#to record the 
             trueNeg.append(Neg)
         return trueNeg, truePos    
+    ''' 
+    #this method can process the data before the train
+    def getadjectiveResult(self):
+        folderName = self.folderName
+        shuffle = self.shuffle
+        pos_train_filenames = glob.glob(folderName+'/txt_sentoken/pos/train/*')
+        neg_train_filenames = glob.glob(folderName+'/txt_sentoken/neg/train/*')
+        pos_test_filenames = glob.glob(folderName+'/txt_sentoken/pos/test/*')
+        neg_test_filenames = glob.glob(folderName+'/txt_sentoken/neg/test/*')
+        truePos = []
+        trueNeg = []
+        wordDic = {}
+        testDic = {}
+        fileNumber = np.arange(1600)
         
+        for i in range(800):
+            pos_train_filename = pos_train_filenames[i]
+            neg_train_filename = neg_train_filenames[i]
+            with open(pos_train_filename,'r') as infile:
+                model = self.makeModel(infile)
+                wordDic[i] = model
+                #if not (self.predict(model, adjectiveWeight)):
+                #    adjectiveWeight = self.update(model, adjectiveWeight, True)
+            with open(neg_train_filename,'r') as infile:
+                model = self.makeModel(infile)
+                wordDic[i+800] = model
+                #if (self.predict(model, adjectiveWeight)):
+                #    adjectiveWeight = self.update(model, adjectiveWeight, False)
+        for i in range(200):
+            pos_test_filename = pos_test_filenames[i]
+            neg_test_filename = neg_test_filenames[i]
+            with open(pos_test_filename,'r') as infile:
+                model = self.makeModel(infile)
+                testDic[i] = model
+                #if(self.predict(model,self.weight)):
+                    #Pos += 1
+            with open(neg_test_filename,'r') as infile:
+                model = self.makeModel(infile)
+                testDic[i+200] = model
+                #if not (self.predict(model,self.weight)):
+                #    Neg += 1         
+
+        for j in range(self.multipalPass):
+            Pos = 0
+            Neg = 0
+            Weight = {}
+            print(j,'this is n time  iteration')
+            #this part is to shuffle the data,
+            #every time I shuffle the data and I will update the weight and test corrected number
+            if shuffle == 1 :
+                random.seed(j)
+                random.shuffle(fileNumber)
+                #random.shuffle(neg_train_filenames)
+            #choose the first 800 file as train data
+            for p in fileNumber:
+                if p < 800 :
+                    if not (self.predict(wordDic[p], Weight)):
+                        Weight = self.update(wordDic[p], Weight, True)
+                else:
+                    if (self.predict(wordDic[p], Weight)):
+                        Weight = self.update(wordDic[p], Weight, False)
+            #to get the multipal pass Weight which is a average Weight
+            self.updateMulWeight(Weight)
+            #choose the rest 200 file as train data
+            for q in range(400):
+                #pos_test_filename = pos_test_filenames[i]
+                #neg_test_filename = neg_test_filenames[i]
+                #with open(pos_test_filename,'r') as infile:
+                #    model = self.makeModel(infile)
+                if q < 200:
+                    if(self.predict(testDic[q],self.weight)):
+                        Pos += 1
+                #with open(neg_test_filename,'r') as infile:
+                #    model = self.makeModel(infile)
+                else:
+                    if not (self.predict(testDic[q],self.weight)):
+                        Neg += 1
+            truePos.append(Pos)#to record the 
+            trueNeg.append(Neg)
+        return trueNeg, truePos    
+    
     #this method is to select the model
     def makeModel(self, openfile):
         if self.Model['binary'] :
+            #it use 28sec 10 pass
             return Counter(re.sub("[^\w']"," ", openfile.read()).lower().split())
         if self.Model['bigram'] :
             bigrams = []
@@ -207,6 +302,15 @@ class perceptron:
             processedTxt = [w for w in txt if not w in stopwords.words('english')]
             stopListBigrams.extend(nltk.bigrams(processedTxt, pad_left=True, pad_right=True))
             return Counter(stopListBigrams)
+        if self.Model['stopList'] :
+            #I want to delete all stoplist, but it also take a very long time
+            #give up
+            #in one turn, it take 300 second to train one time
+            stopListBigrams = []
+            txt = re.sub("[^\w']"," ", openfile.read()).lower().split()
+            processedTxt = [w for w in txt if not w in stopwords.words('english')]
+            #stopListBigrams.extend(nltk.bigrams(processedTxt, pad_left=True, pad_right=True))
+            return Counter(processedTxt)
 
 
         
@@ -214,12 +318,13 @@ if __name__ == '__main__':
     start = timeit.default_timer()
     config = CommandLine()
     shuffle = 1
-    multipalPass = 100
+    multipalPass = 10
     average = True
-    Model = {'binary': False, 'bigram': True, 'trigram' : False,'adjective': False,'stopListBigram' : False}
-    binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model)
+    #you can chage the model here, but only one can be Ture which mean other is False
+    Model = {'binary': True, 'bigram': False , 'trigram' : False,'adjective': False,'stopListBigram' : False, "stopList" : False}
+    binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model,start)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
-    elapsed = timeit.default_timer() - start
-    print("the program use ",elapsed," to finish")
+    #elapsed = timeit.default_timer() - start
+    #print("the program use ",elapsed," to finish")
 
