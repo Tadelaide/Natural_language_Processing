@@ -13,6 +13,7 @@ Created on Thu Mar 4 2018
 """
 import sys, getopt, re, nltk, timeit, glob, random
 from collections import Counter
+from nltk.corpus import stopwords
 import pylab as plt
 import numpy as np
 import spacy
@@ -142,6 +143,7 @@ class perceptron:
                     random.seed(q)
                     random.shuffle(pos_filenames)
                     random.shuffle(neg_filenames)
+            #choose the first 800 file as train data
             for i in range(800):
                 pos_filename = pos_filenames[i]
                 neg_filename = neg_filenames[i]
@@ -158,6 +160,7 @@ class perceptron:
                         Weight = self.update(model, Weight, False)
             #to get the multipal pass Weight which is a average Weight
             self.updateMulWeight(Weight)
+            #choose the rest 200 file as train data
             for i in range(200):
                 pos_rest_filename = pos_filenames[999-i]
                 neg_rest_filename = neg_filenames[999-i]
@@ -172,23 +175,38 @@ class perceptron:
             truePos.append(Pos)#to record the 
             trueNeg.append(Neg)
         return trueNeg, truePos    
-
+        
+    #this method is to select the model
     def makeModel(self, openfile):
         if self.Model['binary'] :
-            return Counter(re.sub("[^\w']"," ", openfile.read()).split())
+            return Counter(re.sub("[^\w']"," ", openfile.read()).lower().split())
         if self.Model['bigram'] :
             bigrams = []
             for line in openfile:
-                bigrams.extend(nltk.bigrams(re.sub("[^\w']"," ", line).split(), pad_left=True, pad_right=True))
+                bigrams.extend(nltk.bigrams(re.sub("[^\w']"," ", line).lower().split(), pad_left=True, pad_right=True))
             return Counter(bigrams)
-        if self.Model['otherMethod']:
+        if self.Model['trigram'] :
+            #the accuracy is a little bad which even worse than binary(bag of words)
+            trigrams = []
+            for line in openfile:
+                trigrams.extend(nltk.trigrams(re.sub("[^\w']"," ", line).lower().split(), pad_left=True, pad_right=True))
+            return Counter(trigrams)
+        if self.Model['adjective']:
             #I have try use the tag of the spacy, but it take a very long time to a file
-            #I give up this method
+            #I give up this method which extract all adjective
+            #in one turn, it take 120 second to train one time
             is_adjective = lambda pos: pos[:2] == 'JJ'
             word = [word for (word, pos) in nltk.pos_tag(nltk.word_tokenize(openfile.read())) if is_adjective(pos)] 
-
             return Counter(word)
-             
+        if self.Model['stopListBigram'] :
+            #I want to delete all stoplist, but it also take a very long time
+            #give up
+            #in one turn, it take 300 second to train one time
+            stopListBigrams = []
+            txt = re.sub("[^\w']"," ", openfile.read()).lower().split()
+            processedTxt = [w for w in txt if not w in stopwords.words('english')]
+            stopListBigrams.extend(nltk.bigrams(processedTxt, pad_left=True, pad_right=True))
+            return Counter(stopListBigrams)
 
 
         
@@ -196,9 +214,9 @@ if __name__ == '__main__':
     start = timeit.default_timer()
     config = CommandLine()
     shuffle = 1
-    multipalPass = 1
+    multipalPass = 100
     average = True
-    Model = {'binary': False, 'bigram': True, 'otherMethod': False}
+    Model = {'binary': False, 'bigram': True, 'trigram' : False,'adjective': False,'stopListBigram' : False}
     binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
