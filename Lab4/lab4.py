@@ -75,10 +75,13 @@ class perceptron:
 
         #get the evaluation information
     def evaluation(self):
+        #old method,which has been update
+        '''
         #if  self.Model['binary'] or self.Model['bigram'] or self.Model['trigram']:
         #    trueNeg,truePos = self.getNgramsResult()
         #else:
         #    trueNeg,truePos = self.getadjectiveResult()
+        '''
         trueNeg,truePos = self.getadjectiveResult()
         truePositive = np.array(truePos)
         trueNegtive = np.array(trueNeg)
@@ -205,6 +208,7 @@ class perceptron:
         fileNumber = np.arange(1600)
         
         for i in range(800):
+            #because i pick all word into a dic, so I have to shuffle the file number
             pos_train_filename = pos_train_filenames[i]
             neg_train_filename = neg_train_filenames[i]
             with open(pos_train_filename,'r') as infile:
@@ -321,7 +325,7 @@ if __name__ == '__main__':
     multipalPass = 10
     average = True
     #you can chage the model here, but only one can be Ture which mean other is False
-    Model = {'binary': True, 'bigram': False , 'trigram' : False,'adjective': False,'stopListBigram' : False, "stopList" : False}
+    Model = {'binary': False, 'bigram': False , 'trigram' : False,'adjective': False,'stopListBigram' : True, "stopList" : False}
     binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model,start)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
