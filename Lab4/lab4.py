@@ -295,6 +295,8 @@ class perceptron:
             #I give up this method which extract all adjective
             #in one turn, it take 120 second to train one time
             is_adjective = lambda pos: pos[:2] == 'JJ'
+            #wordLista = ['JJ' , 'JJR' ,'JJS' , 'VB' , 'VBD' , 'VBG' , 'VBN' , 'VBP' , 'VBZ' , 'RB' , 'RBR' , 'RBS' ]
+            #is_adjective = lambda pos: pos[:2] in wordLista
             word = [word for (word, pos) in nltk.pos_tag(nltk.word_tokenize(openfile.read())) if is_adjective(pos)] 
             return Counter(word)
         if self.Model['stopListBigram'] :
@@ -325,7 +327,7 @@ if __name__ == '__main__':
     multipalPass = 10
     average = True
     #you can chage the model here, but only one can be Ture which mean other is False
-    Model = {'binary': True, 'bigram': False , 'trigram' : False,'adjective': False,'stopListBigram' : False, "stopList" : False}
+    Model = {'binary': False, 'bigram': False , 'trigram' : False,'adjective': True,'stopListBigram' : False, "stopList" : False}
     binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model,start)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
