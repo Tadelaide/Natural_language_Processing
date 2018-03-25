@@ -327,7 +327,7 @@ if __name__ == '__main__':
     multipalPass = 10
     average = True
     #you can chage the model here, but only one can be Ture which mean other is False
-    Model = {'binary': False, 'bigram': False , 'trigram' : False,'adjective': True,'stopListBigram' : False, "stopList" : False}
+    Model = {'binary': True, 'bigram': False , 'trigram' : False,'adjective': False,'stopListBigram' : False, "stopList" : False}
     binaryPerceptron = perceptron(config.args[0], shuffle, multipalPass, average, Model,start)
     print(binaryPerceptron.evaluation())
     #print(sorted(binaryPerceptron.weight, key = lambda i : binaryPerceptron.weight[i]))
