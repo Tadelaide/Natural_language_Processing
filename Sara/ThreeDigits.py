@@ -71,11 +71,14 @@ class Algorithm:
     
     def check(self):
         input = self.prepare(self.sample)
-        if self.algorism == 'B':
-            bfs = BFS(input)
-        if self.algorism == 'D':
-            dfs = DFS(input)
-
+        if self.algorism in ['B','D','I']:
+            method = BFS_DFS_IDS(input)
+            if self.algorism == 'B':
+                method.bfs()
+            if self.algorism == 'D':
+                method.dfs()
+            if self.algorism == 'I':
+                method.ids()
     def prepare(self,sample):
         input = {}
         input['start'] = Digits(sample[0])
@@ -106,8 +109,9 @@ class Node:
     def __init__(self, digits):
         self.parent = None
         self.digits = digits
+        self.childs = [False,False,False,False,False,False]
 
-class BFS:
+class BFS_DFS_IDS:
     def __init__(self, input):
         startDigits = input['start']
         self.topNode = Node(startDigits)
@@ -117,9 +121,12 @@ class BFS:
         self.banList = input['banList']
         self.quene = [self.topNode] 
         self.target = False
-        self.bfs(input)
-    
-    def bfs(self,input):
+        self.DfsNode = {}
+        self.DfsNode[self.topNode.digits.numberStr] = self.topNode
+        self.DfsQuene = [self.topNode]
+
+
+    def bfs(self):
         for i in range(1000):
             if  self.target:
                 self.printResult()
@@ -128,10 +135,34 @@ class BFS:
             if len(self.quene) == 999:
                 print('No solution found.')
                 self.printProcess()
-            self.target = self.getChild(self.quene[i])
-            
+            self.target = self.getBFS_Child(self.quene[i])
+    
+    def dfs(self):
+        for i in range(1000):
+            if  self.target:
+                self.printResult()
+                self.printProcess()
+                break
+            if len(self.quene) == 999:
+                print('No solution found.')
+                self.printProcess()
+                break
+            if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
+                self.DfsQuene.pop()
+            self.target = self.getDFS_Child(self.DfsQuene[-1])
               
-    def getChild(self, node):
+    def ids(self):
+        for i in range(1000):
+            if  self.target:
+                self.printResult()
+                self.printProcess()
+                break 
+            if len(self.quene) == 999:
+                print('No solution found.')
+                self.printProcess()
+            self.target = self.getIDS_Child(self.quene[i])
+    
+    def getBFS_Child(self, node):
         for p in range(len(node.digits.numberThreeDigits)):#3
             if not p == node.digits.lastDigits:
                 for q in range(2):
@@ -155,7 +186,95 @@ class BFS:
                             if newDigits.numberInt == self.targetNode.digits.numberInt:
                                 return True
         return False
-        
+    
+    import sys
+    sys.setrecursionlimit(9999)
+    def getDFS_Child(self, node):
+        if node.digits.numberStr in self.DfsNode.keys():
+            node = self.DfsNode[node.digits.numberStr]
+        #print(node.digits.numberStr,'parent',node.parent.digits.numberStr)
+        #print(node.childs)
+        if not node.childs.count(False) :
+            return False
+        childNumber = node.childs.index(False)
+        currentNumList = node.digits.Str2Digits()
+        #print(node.childs,'first----',node.digits.numberStr)
+        hasChanged = False
+        if childNumber == 0 :
+            if not node.digits.lastDigits == 0 :
+                if not currentNumList[0] == 0 :
+                    currentNumList[0] -= 1
+                    hasChanged = True
+                    node.childs[0] = True
+                else:
+                    node.childs[0] = True
+        elif childNumber == 1 :
+            if not node.digits.lastDigits == 0 :
+                if not currentNumList[0] == 9 :
+                    currentNumList[0] += 1
+                    hasChanged = True
+                    node.childs[1] = True
+                else:
+                    node.childs[1] = True
+        elif childNumber == 2 :
+            if not node.digits.lastDigits == 1 :
+                if not currentNumList[1] == 0 :
+                    currentNumList[1] -= 1
+                    hasChanged = True
+                    node.childs[2] = True
+                else:
+                    node.childs[2] = True
+        elif childNumber == 3 :
+            if not node.digits.lastDigits == 1 :
+                if not currentNumList[1] == 9 :
+                    currentNumList[1] += 1
+                    hasChanged = True
+                    node.childs[3] = True
+                else:
+                    node.childs[3] = True
+        elif childNumber == 4 :
+            if not node.digits.lastDigits == 2 :
+                if not currentNumList[2] == 0 :
+                    currentNumList[2] -= 1
+                    hasChanged = True
+                    node.childs[4] = True
+                else:
+                    node.childs[4] = True
+        else :
+            if not node.digits.lastDigits == 2 :
+                if not currentNumList[2] == 9 :
+                    currentNumList[2] += 1
+                    hasChanged = True
+                    node.childs[5] = True
+                else:
+                    node.childs[5] = True
+        if hasChanged :
+            if not int(self.getStr(currentNumList)) in self.banList:
+                newDigits = Digits(self.getStr(currentNumList))
+                newDigits.lastDigits = childNumber//2
+                #print(newDigits.numberStr,'<><><>',childNumber//2)
+                newNode = Node(newDigits)
+                newNode.parent = node
+                newNode.childs[childNumber//2*2] = True
+                newNode.childs[childNumber//2*2+1] = True
+
+                #print(newNode.parent.digits.numberStr,'qwertrytyuiupoiuyretw',newDigits.numberStr)
+                #print(newNode.parent.childs,'old')
+                if not newDigits.numberStr in self.DfsNode.keys() :
+                    self.DfsNode[newDigits.numberStr] = newNode
+                else :
+                    self.DfsNode[newDigits.numberStr].childs[childNumber//2*2] = True
+                    self.DfsNode[newDigits.numberStr].childs[childNumber//2*2+1] = True
+                    self.DfsNode[newDigits.numberStr].lastDigits = childNumber//2
+                #print(newNode.childs,'=-=-=-=-=')
+                #print(self.DfsNode[newDigits.numberStr].childs,'new')
+                #print(childNumber//2)
+                self.quene.append(newNode)# for print
+                self.DfsQuene.append(newNode)#for the sequence of dfs search element
+                if newDigits.numberInt == self.targetNode.digits.numberInt:
+                    return True
+        return False
+
     def printProcess(self):
         queneStr = ''
         for item in self.quene:
@@ -182,8 +301,6 @@ class BFS:
         for item in numberList:
             combine += str(item)
         return combine
-
-
 
             
 
