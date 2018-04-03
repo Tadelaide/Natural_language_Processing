@@ -71,21 +71,23 @@ class Algorithm:
     
     def check(self):
         input = self.prepare(self.sample)
-        if self.algorism in ['B','D','I']:
-            method = BFS_DFS_IDS(input)
+        if self.algorism in ['B','D','I','G']:
+            method = Implement(input)
             if self.algorism == 'B':
                 method.bfs()
             if self.algorism == 'D':
                 method.dfs()
             if self.algorism == 'I':
                 method.ids()
+            if self.algorism == 'G':
+                method.greedy()
     def prepare(self,sample):
         input = {}
         input['start'] = Digits(sample[0])
         #input['startInt'] = int(sample[0])
         input['final'] = Digits(sample[1])
         #input['finalInt'] = int(sample[1])
-        if len(sample[2]):
+        if len(sample)==3 :
             input['banList'] = [int(item) for item in sample[2].split(",")]
         else:
             input['banList'] = []
@@ -115,7 +117,7 @@ class Node:
         self.childs = [False,False,False,False,False,False]
         self.depth = None
 
-class BFS_DFS_IDS:
+class Implement:
     def __init__(self, input):
         self.startDigits = input['start']
         self.topNode = Node(self.startDigits)
@@ -132,6 +134,8 @@ class BFS_DFS_IDS:
 
         self.IDSdepth = True
         self.IDSQueneRecord = []
+        self.greedyQuene = [self.topNode]
+        self.greedyNode = Node(self.startDigits)
 
     def bfs(self):
         for i in range(1000):
@@ -157,7 +161,8 @@ class BFS_DFS_IDS:
                 break
             if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
                 self.DfsQuene.pop()
-            self.target = self.getDFS_Child(self.DfsQuene[-1])
+            #self.target = self.getDFS_Child(self.DfsQuene[-1])
+            self.target = self.getIDS_Child(self.DfsQuene[-1],None)
 
     def ids(self):
         for i in range(1000):
@@ -188,6 +193,71 @@ class BFS_DFS_IDS:
                         else:
                             self.target = self.getIDS_Child(self.DfsQuene[-1],i)
   
+    def greedy(self):
+        #count = 0
+        for i in range(1000):
+            if  self.target:
+                self.printProcess(self.greedyQuene)
+                self.printProcess(self.greedyQuene)
+                break 
+            if len(self.quene) == 999:
+                print('No solution found.')
+                self.printProcess(self.greedyQuene)
+                break
+            self.IDSdepth = True
+            greedyTopNode = Node(self.greedyNode.digits)
+            greedyTopNode.depth = 0
+            greedyTopNode.digits.lastDigits = self.greedyNode.digits.lastDigits
+            if not self.greedyNode.digits.lastDigits == None :
+                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2] = True
+                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2+1] = True
+            self.DfsQuene = [greedyTopNode]
+            self.IDSQueneRecord = []
+
+            self.DfsNode = {}
+            self.DfsNode[greedyTopNode.digits.numberStr] = greedyTopNode 
+            #print([item.digits.numberStr for item in self.DfsQuene ],'before')
+            #print(self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs)
+            while self.IDSdepth:
+                if self.target :
+                    self.IDSdepth = False
+                else:
+                    if not len(self.DfsQuene):
+                        self.IDSdepth = False
+                    else:
+                        if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
+                            self.DfsQuene.pop()
+                            #print('=-=-=-=-=-=-')
+                        else:
+                            self.target = self.getIDS_Child(self.DfsQuene[-1],1)
+                            #print([item.digits.numberStr for item in self.DfsQuene],'in')
+                            #print([item.childs for item in self.DfsQuene],'in childs')
+                            #count +=1 
+                            #if count >100:
+                            #    self.target = True
+            #print([item.digits.numberStr for item in self.DfsQuene ],'after')
+            #print([item.digits.numberStr for item in self.IDSQueneRecord ],'1231231231231')
+            if not self.target:
+                self.greedyNode = self.rankGreedy(self.IDSQueneRecord)
+                self.greedyQuene.append(self.greedyNode)
+            else:
+                self.greedyQuene.append(self.IDSQueneRecord[-1])
+            #print(self.greedyNode.digits.numberStr,'---')
+
+    def rankGreedy(self,nodeList):
+        rank = {}
+        for item in nodeList:
+            rank[item] = self.calculateHeuristic(item,self.targetNode)
+        return sorted(rank, key = lambda i : rank[i], reverse = True)[-1]
+
+
+    def calculateHeuristic(self, firstNode, secondNode):
+        heuristic = 0
+        firstThreeDigits = firstNode.digits.Str2Digits()
+        secondThreeDigits = secondNode.digits.Str2Digits()
+        for i in range(3):
+            heuristic += abs(firstThreeDigits[i]-secondThreeDigits[i])
+        return heuristic
 
     def getIDS_Child(self, node, depth):
         if node.digits.numberStr in self.DfsNode.keys():
@@ -254,11 +324,12 @@ class BFS_DFS_IDS:
                 newDigits.lastDigits = childNumber//2
                 #print(newDigits.numberStr,'<><><>',childNumber//2)
                 newNode = Node(newDigits)
-                newNode.parent = node              
-                newNode.depth = node.depth + 1
-                if depth - newNode.depth < 0:
-                    node.childs[childNumber] = True
-                    return False             
+                newNode.parent = node
+                if not depth == None:              
+                    newNode.depth = node.depth + 1
+                    if depth - newNode.depth < 0:
+                        node.childs[childNumber] = True
+                        return False             
                 newNode.childs[childNumber//2*2] = True
                 newNode.childs[childNumber//2*2+1] = True
 
@@ -270,7 +341,8 @@ class BFS_DFS_IDS:
                     self.DfsNode[newDigits.numberStr].lastDigits = childNumber//2
                 self.quene.append(newNode)# for print
                 self.DfsQuene.append(newNode)#for the sequence of dfs search element
-                self.IDSQueneRecord.append(newNode)
+                if not depth == None: 
+                    self.IDSQueneRecord.append(newNode)
                 if newDigits.numberInt == self.targetNode.digits.numberInt:
                     return True
         return False
@@ -299,7 +371,9 @@ class BFS_DFS_IDS:
                             if newDigits.numberInt == self.targetNode.digits.numberInt:
                                 return True
         return False
-    
+
+
+    '''
     import sys
     sys.setrecursionlimit(9999)
     def getDFS_Child(self, node):
@@ -368,6 +442,7 @@ class BFS_DFS_IDS:
                 #print(newDigits.numberStr,'<><><>',childNumber//2)
                 newNode = Node(newDigits)
                 newNode.parent = node
+                
                 newNode.childs[childNumber//2*2] = True
                 newNode.childs[childNumber//2*2+1] = True
                 newNode.depth = node.depth + 1
@@ -388,6 +463,7 @@ class BFS_DFS_IDS:
                 if newDigits.numberInt == self.targetNode.digits.numberInt:
                     return True
         return False
+    '''
 
 
 
