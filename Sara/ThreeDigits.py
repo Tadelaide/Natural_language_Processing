@@ -16,7 +16,7 @@ OPTIONS:
     -h : print this help message
 
 Created on Thu Feb 15 2018
-@author: wlt
+@author: Sara
 ------------------------------------------------------------\
 """
 import sys, getopt, re, timeit
