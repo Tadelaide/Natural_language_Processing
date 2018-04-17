@@ -26,6 +26,7 @@ class CommandLine:
     def __init__(self):
         opts, args = getopt.getopt(sys.argv[1:],'h')
         self.args = args
+        '''
         txtCheck = re.compile(r'\w+.txt')
         algorithmsCheck = re.compile('B|D|I|G|A|H|T')# T for test new algorithm
         if ('-h','') in opts:
@@ -43,8 +44,11 @@ class CommandLine:
         
             #To ensure input is txt file
             if not re.match(txtCheck,args[1]):
-                print("*** ERROR: txt file input error - ! ***", file=sys.stderr)
+                arg = args[1]
+                print("*** ERROR: txt file input error - ! ***"+str(arg), file=sys.stderr)
+                print(args, file=sys.stderr)
                 self.printHelp()
+        
 
 
     #Print the Help information
@@ -52,7 +56,7 @@ class CommandLine:
         help = __doc__.replace('<PROGNAME>',sys.argv[0],1)
         print(help, file=sys.stderr)
         sys.exit()
-
+    '''
 class openfile:
     def __init__(self,file):
         self.file = file
@@ -67,40 +71,46 @@ class Algorithm:
     def __init__(self,algorism,sample):
         self.algorism = algorism
         self.sample = sample
+        #print(algorism, file=sys.stderr)
         self.check()
+        
     
     def check(self):
         #get the input about all information
         input = self.prepare(self.sample)
-        if self.algorism in ['B','D','I','G','H','A','T']:
-            method = Implement(input)
+        if self.algorism in ['B','D','I','G','H','A']:
             if self.algorism == 'B':
-                method.bfs()
+                testbfs = bfsClass(input)
+                testbfs.testbfs()
             if self.algorism == 'D':
-                method.dfs()
+                testdfs = dfsClass(input)
+                testdfs.testdfs()
             if self.algorism == 'I':
-                method.ids()
+                testids = idsClass(input)
+                testids.testids()
             if self.algorism == 'G':
-                method.greedy()
+                testgreedy = greedyClass(input)
+                testgreedy.testgreedy()
             if self.algorism == 'H':
-                method.hill_climbing()
-            # if self.algorism == 'A':
-            #     method.a_star()
+                testhill = hillClass(input)
+                testhill.testhill()
             if self.algorism == 'A':
                 testa = a_starClass(input)
                 testa.testAstar()
+            # if self.algorism == 'T':
+            #     testids = idsClass(input)
+            #     testids.testids()
 
     def prepare(self,sample):
         input = {}
         input['start'] = Digits(sample[0])
-        #input['startInt'] = int(sample[0])
         input['final'] = Digits(sample[1])
-        #input['finalInt'] = int(sample[1])
         #to get the banList
         if len(sample)>=3 and len(sample[2]):
             input['banList'] = [int(item) for item in sample[2].split(",")]
         else:
             input['banList'] = []
+        #print(sample, file=sys.stderr)
         return input
 
 class Digits:
@@ -111,7 +121,6 @@ class Digits:
         self.numberInt = int(numberStr)
         self.lastDigits = None
         
-
     def Str2Digits(self):
         threedigits = []
         if not len(self.numberStr) == 3:
@@ -121,15 +130,16 @@ class Digits:
             threedigits.append(int(number))
         return threedigits
 
-class Node:
+#new class for a_star, simply because in IDS or Greedy or Hill-climbing, it don't need uniqueCode to
+#identity two Node, but in a_star, it has a uniqueCode for each Node
+class Node2Astar:
     def __init__(self, digits):
         self.parent = None
         self.digits = digits
         self.childs = [False,False,False,False,False,False]
         self.depth = None
-        self.uniqueCode = self.unique()
-    #define a uniqueCode to indicate the different between the number is same
-    #but their child is different
+        self.count = None
+
     def unique(self):
         strCode = ''
         strCode += str(self.digits.lastDigits)
@@ -140,489 +150,7 @@ class Node:
                 strCode += '0'
         strCode += self.digits.numberStr
         return strCode
-
-class Implement:
-    def __init__(self, input):
-        self.startDigits = input['start']
-        self.topNode = Node(self.startDigits)
-        self.topNode.parent = self.topNode
-        self.topNode.depth = 0
-        targetDigits = input['final']
-        self.targetNode = Node(targetDigits)
-        self.banList = input['banList']
-        #foundation elements
-        self.quene = [self.topNode] 
-        self.target = False
-        #DFS, IDS, greedy, hill parts has some same element I think, I creat new one to make it easy to read
-        #DFS Node to start a new circle
-        self.DfsNode = {}
-        self.DfsNode[self.topNode.digits.numberStr] = self.topNode
-        self.DfsQuene = [self.topNode]
-        #IDS part
-        self.IDSdepth = True
-        self.IDSQueneRecord = []
-        #greedy part
-        self.greedyQuene = [self.topNode]
-        self.greedyNode = Node(self.startDigits)
-        #hill part
-        self.hill = False
-        self.hillDistance = 27 #largest distance
-        
-        #self.a_star_openList = {}
-        #self.a_star_NodeList = {self.topNode.uniqueCode:self.topNode}
-
-        self.check = False
-
-    def bfs(self):
-        for i in range(1000):
-            if i == 0:
-                #check if the topNode is the targetNode
-                if self.checkTop():
-                    break
-            if  self.target:
-                self.printResult()
-                self.printProcess(self.quene)
-                break 
-            if len(self.quene) == 999:
-                print('No solution found.')
-                self.printProcess(self.quene)
-                break
-            self.target = self.getBFS_Child(self.quene[i])
     
-    def dfs(self):
-        for i in range(1000):
-            if i == 0:
-                #check if the topNode is the targetNode
-                if self.checkTop():
-                    break
-            if  self.target:
-                self.printResult()
-                self.printProcess(self.DfsQuene)
-                break
-            if len(self.DfsQuene) == 999:
-                print('No solution found.')
-                self.printProcess(self.DfsQuene)
-                break
-            if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
-                #if all childs is False, pop it
-                self.DfsQuene.pop()
-            #self.target = self.getDFS_Child(self.DfsQuene[-1])
-            self.target = self.getIDS_Child(self.DfsQuene[-1],None)
-
-    def ids(self):
-        for i in range(1000):
-            if i == 0:
-                #check if the topNode is the targetNode
-                if self.checkTop():
-                    break
-            if  self.target:
-                self.printResult()
-                self.printProcess(self.IDSQueneRecord)
-                break
-            if len(self.IDSQueneRecord) > 999:
-                print('No solution found.')
-                self.printProcess(self.IDSQueneRecord)
-                break
-            self.IDSdepth = True
-            #new Node to start topNode
-            idsTopNode = Node(self.startDigits)
-            idsTopNode.depth = 0
-            self.DfsQuene = [idsTopNode]
-            self.DfsNode = {}
-            self.DfsNode[idsTopNode.digits.numberStr] = idsTopNode
-            self.IDSQueneRecord.append(idsTopNode)
-            while self.IDSdepth:
-                if self.target :
-                    self.IDSdepth = False
-                else:
-                    if not len(self.DfsQuene):
-                        self.IDSdepth = False
-                    else:
-                        #if it has explored, pop it
-                        if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
-                            self.DfsQuene.pop()
-                        else:
-                            self.target = self.getIDS_Child(self.DfsQuene[-1],i)
-    # initial greedy algorithm
-    def greedy(self):
-        for i in range(1000):
-            if i == 0:
-                #check if the topNode is the targetNode
-                if self.checkTop():
-                    break
-            if  self.target:
-                self.printProcess(self.greedyQuene)
-                self.printProcess(self.greedyQuene)
-                break 
-            if len(self.greedyQuene) == 999:
-                print('No solution found.')
-                self.printProcess(self.greedyQuene)
-                break
-            self.IDSdepth = True
-            #to innitial new Node as start Node
-            #this is complex, because I don't understand the important of depth and I want to reuse 
-            #self.getIDS_Child, this is a little stupid, because the situation is different.
-            #In this method, the all child of old Node will be True which mean I have explore
-            #and its depth is large than 1.
-            greedyTopNode = Node(self.greedyNode.digits)
-            greedyTopNode.depth = 0
-            greedyTopNode.digits.lastDigits = self.greedyNode.digits.lastDigits
-            if not self.greedyNode.digits.lastDigits == None :
-                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2] = True
-                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2+1] = True
-            self.DfsQuene = [greedyTopNode]
-            self.IDSQueneRecord = []
-            self.DfsNode = {}
-            self.DfsNode[greedyTopNode.digits.numberStr] = greedyTopNode 
-            while self.IDSdepth:
-                if self.target :
-                    self.IDSdepth = False
-                else:
-                    #if no element in DfsQuene, it mean it explore all childNode
-                    if not len(self.DfsQuene):
-                        self.IDSdepth = False
-                    else:
-                        #if it explore, pop it
-                        if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
-                            self.DfsQuene.pop()
-                        else:
-                            self.target = self.getIDS_Child(self.DfsQuene[-1],1)
-            if not self.target:
-                self.greedyNode = self.rankGreedy(self.IDSQueneRecord)
-                self.greedyQuene.append(self.greedyNode)
-            else:
-                self.greedyQuene.append(self.IDSQueneRecord[-1])#for record process
-
-    #like greedy part, just give it a self.hill as direction to evaluate if stop
-    def hill_climbing(self):
-        for i in range(1000):
-            if i == 0:
-                #check if the topNode is the targetNode
-                if self.checkTop():
-                    break
-            if  self.target:
-                self.printProcess(self.greedyQuene)
-                self.printProcess(self.greedyQuene)
-                break 
-            if len(self.greedyQuene) == 999:
-                print('No solution found.')
-                self.printProcess(self.greedyQuene)
-                break
-            if self.hill:
-                print('No solution found.')
-                self.printProcess(self.greedyQuene)
-                break
-            self.IDSdepth = True
-            greedyTopNode = Node(self.greedyNode.digits)
-            greedyTopNode.depth = 0
-            greedyTopNode.digits.lastDigits = self.greedyNode.digits.lastDigits
-            if not self.greedyNode.digits.lastDigits == None :
-                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2] = True
-                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2+1] = True
-            self.DfsQuene = [greedyTopNode]
-            self.IDSQueneRecord = []
-
-            self.DfsNode = {}
-            self.DfsNode[greedyTopNode.digits.numberStr] = greedyTopNode 
-            while self.IDSdepth:
-                if self.target :
-                    self.IDSdepth = False
-                else:
-                    if not len(self.DfsQuene):
-                        self.IDSdepth = False
-                    else:
-                        if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
-                            self.DfsQuene.pop()
-                        else:
-                            self.target = self.getIDS_Child(self.DfsQuene[-1],1)
-            if not self.target:
-                self.greedyNode = self.rankHill_climbing(self.IDSQueneRecord)
-                if not self.hill:
-                    self.greedyQuene.append(self.greedyNode)
-            else:
-                self.greedyQuene.append(self.IDSQueneRecord[-1])
-
-    #old version a_star algorithm
-    '''
-    def a_star(self):
-        #count = 0
-        for i in range(1000):
-            if i == 0:
-                if self.checkTop():
-                    break
-            if  self.target:
-                self.printAstartResult()
-                self.printProcess(self.greedyQuene)
-                break 
-            if len(self.greedyQuene) == 999 :
-                print('No solution found.')
-                self.printProcess(self.greedyQuene)
-                break
-            self.IDSdepth = True
-            greedyTopNode = Node(self.greedyNode.digits)
-            greedyTopNode.depth = 0
-            greedyTopNode.digits.lastDigits = self.greedyNode.digits.lastDigits
-            if not self.greedyNode.digits.lastDigits == None :
-                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2] = True
-                greedyTopNode.childs[self.greedyNode.digits.lastDigits*2+1] = True
-            self.DfsQuene = [greedyTopNode]
-            self.IDSQueneRecord = []
-            self.DfsNode = {}
-            self.DfsNode[greedyTopNode.digits.numberStr] = greedyTopNode 
-            print([item.digits.numberStr for item in self.DfsQuene ],'before')
-            #print(self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs)
-            while self.IDSdepth:
-                if self.target :
-                    self.IDSdepth = False
-                else:
-                    if not len(self.DfsQuene):
-                        self.IDSdepth = False
-                    else:
-                        if not self.DfsNode[self.DfsQuene[-1].digits.numberStr].childs.count(False) :
-                            self.DfsQuene.pop()
-                            #print('=-=-=-=-=-=-')
-                        else:
-                            self.target = self.getIDS_Child(self.DfsQuene[-1],1)
-                            #print([item.digits.numberStr for item in self.DfsQuene],'in')
-                            #print([item.childs for item in self.DfsQuene],'in childs')
-                            #count +=1 
-                            #if count >100:
-                            #    self.target = True
-            #print([item.digits.numberStr for item in self.DfsQuene ],'after')
-            print([item.digits.numberStr for item in self.IDSQueneRecord ],'1231231231231')
-            for item in self.IDSQueneRecord:
-                if not item.digits.numberStr == self.topNode.digits.numberStr:
-                    if not item.digits.numberStr in self.a_star_openList.keys():
-                        self.a_star_openList[item.digits.numberStr] = item
-            #if i == 0 :
-                #self.banList.append(self.topNode.digits.numberInt)
-            if not self.target:
-                self.greedyNode = self.rankA_star([item for item in self.a_star_openList.values()])
-                self.a_star_openList.pop(self.greedyNode.digits.numberStr)
-                #self.banList.append(self.greedyNode.digits.numberInt)
-                self.greedyQuene.append(self.greedyNode)
-                if self.greedyNode.uniqueCode not in self.a_star_NodeList.keys():
-                    self.a_star_NodeList[self.greedyNode.uniqueCode] = self.greedyNode
-                print([item.digits.numberStr for item in self.a_star_openList.values() ],'=========')
-            else:
-                self.greedyQuene.append(self.IDSQueneRecord[-1])
-            print(self.greedyNode.digits.numberStr,'---' ,self.greedyNode.parent.digits.numberStr)
-            #print(self.greedyNode.childs,'====;;;;;')
-            print([item.digits.numberStr for item in self.a_star_NodeList.values()],'-----;;;;;;;')
-    '''
-
-        
-        
-
-    #rank the NodeList and find the score lowest and lasted added one to return 
-    def rankGreedy(self,nodeList):
-        rank = {}
-        for item in nodeList:
-            rank[item] = self.calculateHeuristic(item,self.targetNode)
-        return sorted(rank, key = lambda i : rank[i], reverse = True)[-1]
-
-    #use a self.hill to indicate the direction
-    def rankHill_climbing(self,nodeList):
-        rank = {}
-        for item in nodeList:
-            rank[item] = self.calculateHeuristic(item,self.targetNode)
-        sortedNodeList = sorted(rank, key = lambda i : rank[i], reverse = True)
-        if self.hillDistance > rank[sortedNodeList[-1]]:
-            self.hillDistance = rank[sortedNodeList[-1]]
-        else:
-            self.hill = True
-        return sortedNodeList[-1]
-
-    # def rankA_star(self,nodeList):
-    #     rank = {}
-    #     for item in nodeList:
-    #         rank[item] = self.calculateHeuristic(item,self.targetNode) + self.calculateHeuristic(item,self.topNode)
-    #     sortedNodeList = sorted(rank, key = lambda i : rank[i], reverse = True)
-    #     return sortedNodeList[-1]
-        
-    #calculate Manhattan distance
-    def calculateHeuristic(self, firstNode, secondNode):
-        heuristic = 0
-        firstThreeDigits = firstNode.digits.Str2Digits()
-        secondThreeDigits = secondNode.digits.Str2Digits()
-        for i in range(3):
-            heuristic += abs(firstThreeDigits[i]-secondThreeDigits[i])
-        return heuristic
-
-
-    #to find IDS child, I think this version is too complex and ignore the depth
-    #which is a very important information in a_star algorithm, so I start a new 
-    #getA_starChild below
-    def getIDS_Child(self, node, depth):
-        if node.digits.numberStr in self.DfsNode.keys():
-            node = self.DfsNode[node.digits.numberStr]
-        #print(node.digits.numberStr,'parent',node.parent.digits.numberStr)
-        #print(node.childs)
-        if not node.childs.count(False) :
-            return False
-        childNumber = node.childs.index(False)
-        currentNumList = node.digits.Str2Digits()
-        #print(node.childs,'first----',node.digits.numberStr)
-        hasChanged = False
-        #find all six possible condition
-        if childNumber == 0 :
-            if not node.digits.lastDigits == 0 :
-                if not currentNumList[0] == 0 :
-                    currentNumList[0] -= 1
-                    hasChanged = True
-                    node.childs[0] = True
-                else:
-                    node.childs[0] = True
-        elif childNumber == 1 :
-            if not node.digits.lastDigits == 0 :
-                if not currentNumList[0] == 9 :
-                    currentNumList[0] += 1
-                    hasChanged = True
-                    node.childs[1] = True
-                else:
-                    node.childs[1] = True
-        elif childNumber == 2 :
-            if not node.digits.lastDigits == 1 :
-                if not currentNumList[1] == 0 :
-                    currentNumList[1] -= 1
-                    hasChanged = True
-                    node.childs[2] = True
-                else:
-                    node.childs[2] = True
-        elif childNumber == 3 :
-            if not node.digits.lastDigits == 1 :
-                if not currentNumList[1] == 9 :
-                    currentNumList[1] += 1
-                    hasChanged = True
-                    node.childs[3] = True
-                else:
-                    node.childs[3] = True
-        elif childNumber == 4 :
-            if not node.digits.lastDigits == 2 :
-                if not currentNumList[2] == 0 :
-                    currentNumList[2] -= 1
-                    hasChanged = True
-                    node.childs[4] = True
-                else:
-                    node.childs[4] = True
-        else :
-            if not node.digits.lastDigits == 2 :
-                if not currentNumList[2] == 9 :
-                    currentNumList[2] += 1
-                    hasChanged = True
-                    node.childs[5] = True
-                else:
-                    node.childs[5] = True
-        if hasChanged :
-            #prevent item in banList
-            if not int(self.getStr(currentNumList)) in self.banList:
-                newDigits = Digits(self.getStr(currentNumList))
-                newDigits.lastDigits = childNumber//2
-                #print(newDigits.numberStr,'<><><>',childNumber//2)
-                newNode = Node(newDigits)
-                newNode.parent = node
-                #prevent error which node is topNode with None depth
-                if not depth == None:              
-                    newNode.depth = node.depth + 1
-                    if depth - newNode.depth < 0:
-                        node.childs[childNumber] = True
-                        return False             
-                newNode.childs[childNumber//2*2] = True
-                newNode.childs[childNumber//2*2+1] = True
-                #if it not in DfsNode, add it
-                if not newDigits.numberStr in self.DfsNode.keys() :
-                    self.DfsNode[newDigits.numberStr] = newNode
-                else :
-                #if it in DfsNode, update the information
-                    self.DfsNode[newDigits.numberStr].childs[childNumber//2*2] = True
-                    self.DfsNode[newDigits.numberStr].childs[childNumber//2*2+1] = True
-                    self.DfsNode[newDigits.numberStr].lastDigits = childNumber//2
-                self.quene.append(newNode)# for print
-                self.DfsQuene.append(newNode)#for the sequence of dfs search element
-                #prevent topNode error
-                if not depth == None: 
-                    self.IDSQueneRecord.append(newNode)
-                if newDigits.numberInt == self.targetNode.digits.numberInt:
-                    return True
-        return False
-
-    #get the BFS six child, only limited condition is lastdigits
-    def getBFS_Child(self, node):
-        for p in range(len(node.digits.numberThreeDigits)):#3
-            if not p == node.digits.lastDigits:
-                for q in range(2):
-                    hasChanged = False
-                    currentNumList = node.digits.Str2Digits()
-                    if q == 0 :
-                        if not currentNumList[p] == 0 :
-                            currentNumList[p] -= 1
-                            hasChanged = True
-                    if q == 1 :
-                        if not currentNumList[p] == 9:
-                            currentNumList[p] += 1
-                            hasChanged = True
-                    if hasChanged :
-                        if not int(self.getStr(currentNumList)) in self.banList:
-                            newDigits = Digits(self.getStr(currentNumList))
-                            newDigits.lastDigits = p
-                            newNode = Node(newDigits)
-                            newNode.parent = node
-                            self.quene.append(newNode)
-                            if newDigits.numberInt == self.targetNode.digits.numberInt:
-                                return True
-        return False
-
-    def printProcess(self, quene):
-        queneStr = ''
-        for item in quene:
-            queneStr += item.digits.numberStr+','
-        print(queneStr[:-1])
-
-    def printResult(self):
-        resultNode = self.quene[-1]
-        resultStr = ''
-        resultList = []
-        symbol = True
-        while symbol:
-            resultList.append(resultNode.digits.numberStr)
-            resultNode = resultNode.parent
-            if resultNode.digits.numberStr == self.topNode.digits.numberStr:
-                symbol = False
-        resultList.append(self.topNode.digits.numberStr)
-        for item in resultList[::-1]:
-            resultStr += item + ','
-        print(resultStr[:-1])
-
-    # def printAstartResult(self):
-    #     queneStrList = []
-    #     queneStr =  ''
-    #     lastNode = self.greedyQuene[-1]
-    #     while True: 
-    #         queneStrList.append(lastNode.digits.numberStr+',')
-    #         lastNode = self.a_star_NodeList[lastNode.parent.uniqueCode]
-    #         if lastNode.digits.numberStr == self.topNode.digits.numberStr :
-    #             break
-    #     queneStrList.append(self.topNode.digits.numberStr+',')
-    #     queneStrList.reverse()
-    #     for item in queneStrList:
-    #         queneStr += item
-    #     print(queneStr[:-1])
-
-    def getStr(self, numberList):
-        combine = ''
-        for item in numberList:
-            combine += str(item)
-        return combine
-    #to check the topNode is or not targetNode
-    def checkTop(self):
-        if self.topNode.digits.numberStr == self.targetNode.digits.numberStr:
-            self.check = True
-        if self.check:
-            print(self.topNode.digits.numberStr) 
-            print(self.topNode.digits.numberStr) 
-            return True
-        return False
-
 #Because the code above is too complex, I rewrite the a_star algorithm in a
 #simple way, this way is much easier to understand.
 class a_starClass():
@@ -644,31 +172,45 @@ class a_starClass():
         #self.a_star_NodeList = {self.topNode.unique():self.topNode}
         #this completedList is to store those node which has been explored
         self.a_star_completedList = {}
+        self.a_star_completedListRecord = []
+        
+        self.count = 0
+        self.topNode.count = self.count
 
     def testAstar(self):
-        for i in range(1000):
+        for i in range(10000):
             if i == 0:
                 if self.checkTop():
                     break
             if  self.target:
                 self.printAstartResult()
-                self.printAstarProcess(self.a_star_completedList)
+                #self.printAstarProcess(self.a_star_completedList)
+                self.printProcess(self.a_star_completedListRecord)
                 break 
-            if len(self.a_star_openList)+len(self.a_star_completedList) >= 999 :
+            if len(self.a_star_openList)+len(self.a_star_completedList) > 999 :
                 print('No solution found.')
-                self.printAstarProcess(self.a_star_completedList)
+                #self.printAstarProcess(self.a_star_completedList)
+                self.printProcess(self.a_star_completedListRecord)
+                break
+            if len(self.a_star_openList) == 0 :
+                print('No solution found.')
+                #self.printAstarProcess(self.a_star_completedList)
+                self.printProcess(self.a_star_completedListRecord)
                 break
 
             #give a todoNode to start the explore
+            #print([item.digits.numberStr for item in self.a_star_openList.values()],i,'open before rank',file=sys.stderr)
             todoNode = self.rankA_star([item for item in self.a_star_openList.values()])
             self.getAstarChild(todoNode)
-            #print([item.digits.numberStr for item in self.a_star_completedList.values()],i,'completed')
-            #print([item.digits.numberStr for item in self.a_star_openList.values()],i,'todo')
+            #print([item.digits.numberStr for item in self.a_star_completedList.values()],i,'completed',file=sys.stderr)
+            #print([item.digits.numberStr for item in self.a_star_openList.values()],i,'todo',file=sys.stderr)
     
     #this method is to get the six possible child of the todoNode 
     def getAstarChild(self, todonode):
         self.a_star_openList.pop(todonode.unique())
-        self.a_star_completedList[todonode.unique()] = todonode
+        #which is really interesting in python2.7, the element in dic has a sequence
+        #self.a_star_completedList[todonode.unique()] = todonode
+        self.a_star_completedListRecord.append(todonode)#new
         #parentNodedistance = self.calculateHeuristic(todonode,self.targetNode)
         for i in range(6):#this is fixed
             hasChanged = False
@@ -700,26 +242,47 @@ class a_starClass():
                 #sonNodedistance = self.calculateHeuristic(newNode,self.targetNode) 
                 if newNode.digits.numberStr == self.targetNode.digits.numberStr :
                     self.target = True
-                    self.a_star_completedList[newNode.unique()] = newNode
+                    #which is really interesting in python2.7, the element in dic has a sequence
+                    #self.a_star_completedList[newNode.unique()] = newNode
+                    self.a_star_completedListRecord.append(newNode)#new
                     self.resultNode = newNode
                 #to prevent the top node, which will lead to a circle
                 if not self.topNode.digits.numberStr == newNode.digits.numberStr :
-                    #if sonNodedistance <= parentNodedistance:
-                    self.a_star_openList[newNode.unique()] = newNode
+                    if not newNode.unique() in self.a_star_openList.keys():
+                        
+                        newNode.count = self.count
+                        self.count += 1
+
+                        self.a_star_openList[newNode.unique()] = newNode
+                        #print([item.digits.numberStr for item in self.a_star_openList.values()],i,'appending',file=sys.stderr)
 
     def rankA_star(self,nodeList):
         rank = {}
         for item in nodeList:
             #use depth as the distance with topNode, this prevent some circle
             rank[item] = self.calculateHeuristic(item,self.targetNode) + item.depth
-        sortedNodeList = sorted(rank, key = lambda i : rank[i], reverse = True)
+        #sortedNodeList = sorted(rank, key = lambda i : rank[i], reverse = True)
+        #print([item.digits.numberStr for item in rank.keys()],'before rank',file=sys.stderr)
+        minimum = 27
+        minkey = self.topNode
+        for key in rank.keys():
+            if rank[key] < minimum:
+                minimum = rank[key]
+                minkey = key
+            if rank[key] == minimum:
+                if key.count > minkey.count:
+                    minimum = rank[key]
+                    minkey = key 
+        #print([item.digits.numberStr for item in sortedNodeList],'sorted',file=sys.stderr)
+        #print(minkey.digits.numberStr,'sorted',file=sys.stderr)
         #print([item.digits.numberStr for item in sortedNodeList],'1111111')
         
         #if len(sortedNodeList) > 2:
         #    if sortedNodeList[-1].digits.numberStr == sortedNodeList[-2].digits.numberStr:
         #        if sortedNodeList[-2].depth < sortedNodeList[-1].depth:
         #            return sortedNodeList[-2]
-        return sortedNodeList[-1]
+        #print(sortedNodeList, file=sys.stderr)
+        return minkey
         
     #this method to check the targetNode is or not the topNode, prevent some error
     def checkTop(self):
@@ -739,13 +302,388 @@ class a_starClass():
             heuristic += abs(firstThreeDigits[i]-secondThreeDigits[i])
         return heuristic
 
-    def printAstarProcess(self, quene):
+    # def printAstarProcess(self, quene):
+    #     queneStr = ''
+    #     for item in quene.keys():
+    #         queneStr += quene[item].digits.numberStr+','
+    #     print(queneStr[:-1],'sorted',file=sys.stderr)
+        
+    def printProcess(self, quene):
         queneStr = ''
-        for item in quene.keys():
-            queneStr += quene[item].digits.numberStr+','
+        for item in quene:
+            queneStr += item.digits.numberStr+','
         print(queneStr[:-1])
 
     def printAstartResult(self):
+        resultStr = ''
+        resultList = []
+        judge = True
+        lastNode = self.resultNode
+        while judge :
+            resultList.append(lastNode.digits.numberStr)
+            if lastNode.digits.numberStr == self.topNode.digits.numberStr :
+                judge = False
+            lastNode = lastNode.parent
+        resultList.reverse()
+        for item in resultList:
+            resultStr += item+ ','
+        print(resultStr[:-1])            
+
+    def getStr(self, numberList):
+        combine = ''
+        for item in numberList:
+            combine += str(item)
+        return combine
+
+
+
+class greedyClass():
+    def __init__(self, input):
+        self.startDigits = input['start']
+        self.topNode = Node2Astar(self.startDigits)
+        self.topNode.parent = self.topNode
+        self.topNode.depth = 0
+        targetDigits = input['final']
+        self.targetNode = Node2Astar(targetDigits)
+        self.banList = input['banList']
+
+        self.resultNode = None
+        self.target = False
+        self.check = False
+        #self.distance = self.calculateHeuristic(self.topNode,self.targetNode)
+        #this openList is to store the node expanded
+        self.greedy_openList = {self.topNode.unique():self.topNode}
+        #self.a_star_NodeList = {self.topNode.unique():self.topNode}
+        #this completedList is to store those node which has been explored
+        self.greedy_completedList = {}
+        self.greedy_completedListRecord = []
+
+        self.count = 0
+        self.topNode.count = self.count
+
+    def testgreedy(self):
+        for i in range(10000):
+            if i == 0:
+                if self.checkTop():
+                    break
+            if  self.target:
+                self.printGreedyResult()
+                #self.printGreedyProcess(self.greedy_completedList)
+                self.printProcess(self.greedy_completedListRecord)
+                #print(self.printGreedyResult()+'\n'+self.printGreedyProcess(self.greedy_completedList))
+                break 
+            if len(self.greedy_openList)+len(self.greedy_completedList) > 999 :
+                print('No solution found.')
+                #self.printGreedyProcess(self.greedy_completedList)
+                self.printProcess(self.greedy_completedListRecord)
+                #print('No solution found.\n'+self.printGreedyProcess(self.greedy_completedList))
+                break
+            if len(self.greedy_openList) == 0 :
+                print('No solution found.')
+                #self.printGreedyProcess(self.greedy_completedList)
+                self.printProcess(self.greedy_completedListRecord)
+                #print('No solution found.\n'+self.printGreedyProcess(self.greedy_completedList))
+                break
+
+            #give a todoNode to start the explore
+            todoNode = self.rankgreedy([item for item in self.greedy_openList.values()])
+            self.getGreedyChild(todoNode)
+            #print([item.digits.numberStr for item in self.greedy_completedList.values()],i,'completed')
+            #print([item.digits.numberStr for item in self.greedy_openList.values()],i,'todo')
+    
+    #this method is to get the six possible child of the todoNode 
+    def getGreedyChild(self, todonode):
+        self.greedy_openList.pop(todonode.unique())
+        #which is really interesting in python2.7, the element in dic has a sequence
+        #self.greedy_completedList[todonode.unique()] = todonode
+        self.greedy_completedListRecord.append(todonode)
+        for i in range(6):#this is fixed
+            hasChanged = False
+            currentNumList = todonode.digits.Str2Digits()
+            if not todonode.digits.lastDigits == i//2 :
+                if i % 2 == 0:
+                    if not currentNumList[i//2] == 0 :
+                        currentNumList[i//2] -= 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+                else:
+                    if not currentNumList[i//2] == 9 :
+                        currentNumList[i//2] += 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+            if hasChanged and not int(self.getStr(currentNumList)) in self.banList:
+                newDigits = Digits(self.getStr(currentNumList))
+                newNode = Node2Astar(newDigits)
+                #this is important to give newNode lastDigit and childs informaiton
+                newNode.digits.lastDigits = i//2
+                newNode.childs[i//2] = True
+                newNode.childs[i//2+1] = True
+                newNode.depth = todonode.depth + 1
+                newNode.parent = todonode
+                #sonNodedistance = self.calculateHeuristic(newNode,self.targetNode) 
+                if newNode.digits.numberStr == self.targetNode.digits.numberStr :
+                    self.target = True
+                    #which is really interesting in python2.7, the element in dic has a sequence
+                    #self.greedy_completedList[newNode.unique()] = newNode
+                    self.greedy_completedListRecord.append(newNode)
+                    self.resultNode = newNode
+                #to prevent the top node, which will lead to a circle
+                if not self.topNode.digits.numberStr == newNode.digits.numberStr :
+                    if not newNode.unique() in self.greedy_openList.keys():
+                        self.greedy_openList[newNode.unique()] = newNode
+
+                        newNode.count = self.count
+                        self.count += 1
+
+    def rankgreedy(self,nodeList):
+        rank = {}
+        for item in nodeList:
+            #use depth as the distance with topNode, this prevent some circle
+            rank[item] = self.calculateHeuristic(item,self.targetNode)
+        #print([item.digits.numberStr for item in rank],'111') 
+        #sortedNodeList = sorted(rank, key = lambda i : rank[i], reverse = True)
+
+        minimum = 27
+        minkey = self.topNode
+        for key in rank.keys():
+            if rank[key] < minimum:
+                minimum = rank[key]
+                minkey = key
+            if rank[key] == minimum:
+                if key.count > minkey.count:
+                    minimum = rank[key]
+                    minkey = key 
+
+        #print([item.digits.numberStr for item in sortedNodeList],'222')
+        return minkey
+        
+    #this method to check the targetNode is or not the topNode, prevent some error
+    def checkTop(self):
+        if self.topNode.digits.numberStr == self.targetNode.digits.numberStr:
+            self.check = True
+        if self.check:
+            print(self.topNode.digits.numberStr) 
+            print(self.topNode.digits.numberStr) 
+            return True
+        return False
+
+    #calculate heuristic with two Node
+    def calculateHeuristic(self, firstNode, secondNode):
+        heuristic = 0
+        firstThreeDigits = firstNode.digits.Str2Digits()
+        secondThreeDigits = secondNode.digits.Str2Digits()
+        for i in range(3):
+            heuristic += abs(firstThreeDigits[i]-secondThreeDigits[i])
+        return heuristic
+
+    # def printGreedyProcess(self, quene):
+    #     queneStr = ''
+    #     for item in quene.keys():
+    #         queneStr += quene[item].digits.numberStr+','
+    #     print(queneStr[:-1])
+    #     #return queneStr[:-1]
+
+    def printGreedyResult(self):
+        resultStr = ''
+        resultList = []
+        judge = True
+        lastNode = self.resultNode
+        while judge :
+            resultList.append(lastNode.digits.numberStr)
+            if lastNode.digits.numberStr == self.topNode.digits.numberStr :
+                judge = False
+            lastNode = lastNode.parent
+        resultList.reverse()
+        for item in resultList:
+            resultStr += item+ ','
+        print(resultStr[:-1])
+        #return resultStr[:-1]
+            
+    def printProcess(self, quene):
+        queneStr = ''
+        for item in quene:
+            queneStr += item.digits.numberStr+','
+        print(queneStr[:-1])
+
+
+    def getStr(self, numberList):
+        combine = ''
+        for item in numberList:
+            combine += str(item)
+        return combine
+
+
+
+class hillClass():
+    def __init__(self, input):
+        self.startDigits = input['start']
+        self.topNode = Node2Astar(self.startDigits)
+        self.topNode.parent = self.topNode
+        self.topNode.depth = 0
+        targetDigits = input['final']
+        self.targetNode = Node2Astar(targetDigits)
+        self.banList = input['banList']
+
+        self.resultNode = None
+        self.target = False
+        self.check = False
+        #self.distance = self.calculateHeuristic(self.topNode,self.targetNode)
+        #this openList is to store the node expanded
+        self.hill_openList = {self.topNode.unique():self.topNode}
+        #self.a_star_NodeList = {self.topNode.unique():self.topNode}
+        #this completedList is to store those node which has been explored
+        self.hill_completedList = {}
+
+        self.hill = False
+        self.hillDistance = 27
+
+        self.hill_completedListRecord = []
+
+        self.count = 0
+        self.topNode.count = self.count
+
+    def testhill(self):
+        for i in range(10000):
+            if i == 0:
+                if self.checkTop():
+                    break
+            if  self.target:
+                self.printhillResult()
+                #self.printhillProcess(self.hill_completedList)
+                self.printProcess(self.hill_completedListRecord)
+                break 
+            if len(self.hill_openList)+len(self.hill_completedList) > 999 :
+                print('No solution found.')
+                #self.printhillProcess(self.hill_completedList)
+                self.printProcess(self.hill_completedListRecord)
+                break
+            if len(self.hill_openList) == 0 :
+                print('No solution found.')
+                #self.printhillProcess(self.hill_completedList)
+                self.printProcess(self.hill_completedListRecord)
+                break
+
+            #give a todoNode to start the explore
+            todoNode = self.rankhill([item for item in self.hill_openList.values()])
+            if self.hill :
+                print('No solution found.')
+                #self.printhillProcess(self.hill_completedList)
+                self.printProcess(self.hill_completedListRecord)
+                break
+            self.gethillChild(todoNode)
+            #print([item.digits.numberStr for item in self.hill_completedList.values()],i,'completed')
+            #print([item.digits.numberStr for item in self.hill_openList.values()],i,'todo')
+    
+    #this method is to get the six possible child of the todoNode 
+    def gethillChild(self, todonode):
+        self.hill_openList.pop(todonode.unique())
+        #which is really interesting in python2.7, the element in dic has a sequence
+        #self.hill_completedList[todonode.unique()] = todonode
+        self.hill_completedListRecord.append(todonode)
+        for i in range(6):#this is fixed
+            hasChanged = False
+            currentNumList = todonode.digits.Str2Digits()
+            if not todonode.digits.lastDigits == i//2 :
+                if i % 2 == 0:
+                    if not currentNumList[i//2] == 0 :
+                        currentNumList[i//2] -= 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+                else:
+                    if not currentNumList[i//2] == 9 :
+                        currentNumList[i//2] += 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+            if hasChanged and not int(self.getStr(currentNumList)) in self.banList:
+                newDigits = Digits(self.getStr(currentNumList))
+                newNode = Node2Astar(newDigits)
+                #this is important to give newNode lastDigit and childs informaiton
+                newNode.digits.lastDigits = i//2
+                newNode.childs[i//2] = True
+                newNode.childs[i//2+1] = True
+                newNode.depth = todonode.depth + 1
+                newNode.parent = todonode
+                #sonNodedistance = self.calculateHeuristic(newNode,self.targetNode) 
+                if newNode.digits.numberStr == self.targetNode.digits.numberStr :
+                    self.target = True
+                    #which is really interesting in python2.7, the element in dic has a sequence
+                    #self.hill_completedList[todonode.unique()] = todonode
+                    self.hill_completedListRecord.append(newNode)
+                    self.resultNode = newNode
+                #to prevent the top node, which will lead to a circle
+                if not self.topNode.digits.numberStr == newNode.digits.numberStr :
+                    if not newNode.unique() in self.hill_openList.keys():
+                        self.hill_openList[newNode.unique()] = newNode
+
+                        newNode.count = self.count
+                        self.count += 1
+
+    def rankhill(self,nodeList):
+        rank = {}
+        for item in nodeList:
+            #use depth as the distance with topNode, this prevent some circle
+            rank[item] = self.calculateHeuristic(item,self.targetNode)
+        #print([item.digits.numberStr for item in rank],'111') 
+        sortedNodeList = sorted(rank, key = lambda i : rank[i], reverse = True)
+        #print([item.digits.numberStr for item in sortedNodeList],'222')
+
+        minimum = 27
+        minkey = self.topNode
+        for key in rank.keys():
+            if rank[key] < minimum:
+                minimum = rank[key]
+                minkey = key
+            if rank[key] == minimum:
+                if key.count > minkey.count:
+                    minimum = rank[key]
+                    minkey = key 
+
+        if self.hillDistance > minimum:
+            self.hillDistance = minimum
+        else:
+            self.hill = True
+        return minkey
+        
+    #this method to check the targetNode is or not the topNode, prevent some error
+    def checkTop(self):
+        if self.topNode.digits.numberStr == self.targetNode.digits.numberStr:
+            self.check = True
+        if self.check:
+            print(self.topNode.digits.numberStr) 
+            print(self.topNode.digits.numberStr) 
+            return True
+        return False
+
+    #calculate heuristic with two Node
+    def calculateHeuristic(self, firstNode, secondNode):
+        heuristic = 0
+        firstThreeDigits = firstNode.digits.Str2Digits()
+        secondThreeDigits = secondNode.digits.Str2Digits()
+        for i in range(3):
+            heuristic += abs(firstThreeDigits[i]-secondThreeDigits[i])
+        return heuristic
+
+    # def printhillProcess(self, quene):
+    #     queneStr = ''
+    #     for item in quene.keys():
+    #         queneStr += quene[item].digits.numberStr+','
+    #     print(queneStr[:-1])
+                
+    def printProcess(self, quene):
+        queneStr = ''
+        for item in quene:
+            queneStr += item.digits.numberStr+','
+        print(queneStr[:-1])
+
+    def printhillResult(self):
         resultStr = ''
         resultList = []
         judge = True
@@ -766,26 +704,412 @@ class a_starClass():
         for item in numberList:
             combine += str(item)
         return combine
-#new class for a_star, simply because in IDS or Greedy or Hill-climbing, it don't need uniqueCode to
-#identity two Node, but in a_star, it has a uniqueCode for each Node
-class Node2Astar:
-    def __init__(self, digits):
-        self.parent = None
-        self.digits = digits
-        self.childs = [False,False,False,False,False,False]
-        self.depth = None
 
-    def unique(self):
-        strCode = ''
-        strCode += str(self.digits.lastDigits)
-        for item in self.childs:
-            if item:
-                strCode += '1'
-            else:
-                strCode += '0'
-        strCode += self.digits.numberStr
-        return strCode
+class bfsClass():
+    def __init__(self, input):
+        self.startDigits = input['start']
+        self.topNode = Node2Astar(self.startDigits)
+        self.topNode.parent = self.topNode
+        self.topNode.depth = 0
+        self.topNode.digits.lastDigits = 100
+        targetDigits = input['final']
+        self.targetNode = Node2Astar(targetDigits)
+        self.banList = input['banList']
 
+        self.resultNode = None
+        self.target = False
+        self.check = False
+        #self.distance = self.calculateHeuristic(self.topNode,self.targetNode)
+        #this openList is to store the node expanded
+        self.bfs_SequenceList = [self.topNode]
+        self.bfs_openList = {self.topNode.unique():self.topNode}
+        #self.a_star_NodeList = {self.topNode.unique():self.topNode}
+        #this completedList is to store those node which has been explored
+        #self.bfs_completedList = {}
+
+
+    def testbfs(self):
+        for i in range(10000):
+            if i == 0:
+                if self.checkTop():
+                    break
+            if  self.target:
+                self.printbfsResult()
+                self.printProcess(self.bfs_SequenceList)
+                break 
+            if len(self.bfs_SequenceList) > 999 :
+                print('No solution found.')
+                self.printProcess(self.bfs_SequenceList)
+                break
+            if len(self.bfs_openList) == 0 :
+                print('No solution found.')
+                self.printProcess(self.bfs_SequenceList)
+                break
+            preventBlock = len(self.bfs_SequenceList)            
+            #give a todoNode to start the explore
+            todoNode = self.bfs_SequenceList[i]
+            self.getbfsChild(todoNode)
+            if preventBlock == len(self.bfs_SequenceList) and i == len(self.bfs_SequenceList)-1:
+                print('No solution found.')
+                self.printProcess(self.bfs_SequenceList)
+                break
+            #print([item.digits.numberStr for item in self.bfs_completedList.values()],i,'completed')
+            #print([item.digits.numberStr for item in self.bfs_openList.values()],i,'todo')
+    
+    #this method is to get the six possible child of the todoNode 
+    def getbfsChild(self, todonode):
+        #self.bfs_openList.pop(todonode.unique())
+        #self.bfs_completedList[todonode.unique()] = todonode
+        for i in range(6):#this is fixed
+            hasChanged = False
+            currentNumList = todonode.digits.Str2Digits()
+            if not todonode.digits.lastDigits == i//2 :
+                if i % 2 == 0:
+                    if not currentNumList[i//2] == 0 :
+                        currentNumList[i//2] -= 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+                else:
+                    if not currentNumList[i//2] == 9 :
+                        currentNumList[i//2] += 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+            if hasChanged and not int(self.getStr(currentNumList)) in self.banList :
+                newDigits = Digits(self.getStr(currentNumList))
+                newNode = Node2Astar(newDigits)
+                #this is important to give newNode lastDigit and childs informaiton
+                newNode.digits.lastDigits = i//2
+                newNode.childs[i//2] = True
+                newNode.childs[i//2+1] = True
+                newNode.depth = todonode.depth + 1
+                newNode.parent = todonode
+                if not newNode.unique() in self.bfs_openList.keys():
+                    self.bfs_SequenceList.append(newNode)
+                    self.bfs_openList[newNode.unique()] = newNode
+                    #print(newNode.digits.numberStr,'1231231231',newNode.unique(),'-------')
+                #sonNodedistance = self.calculateHeuristic(newNode,self.targetNode) 
+                if newNode.digits.numberStr == self.targetNode.digits.numberStr :
+                    self.target = True
+                    self.resultNode = newNode
+                    break
+                #to prevent the top node, which will lead to a circle
+                #if not self.topNode.digits.numberStr == newNode.digits.numberStr :
+                #if not newNode.unique() in self.bfs_openList.keys():
+                    
+
+        
+    #this method to check the targetNode is or not the topNode, prevent some error
+    def checkTop(self):
+        if self.topNode.digits.numberStr == self.targetNode.digits.numberStr:
+            self.check = True
+        if self.check:
+            print(self.topNode.digits.numberStr) 
+            print(self.topNode.digits.numberStr) 
+            return True
+        return False
+
+    def printbfsResult(self):
+        resultStr = ''
+        resultList = []
+        judge = True
+        lastNode = self.resultNode
+        while judge :
+            resultList.append(lastNode.digits.numberStr)
+            if lastNode.digits.numberStr == self.topNode.digits.numberStr :
+                judge = False
+            lastNode = lastNode.parent
+        resultList.reverse()
+        for item in resultList:
+            resultStr += item+ ','
+        print(resultStr[:-1])
+    
+    def printProcess(self, quene):
+        queneStr = ''
+        for item in quene:
+            queneStr += item.digits.numberStr+','
+        print(queneStr[:-1])
+            
+
+    def getStr(self, numberList):
+        combine = ''
+        for item in numberList:
+            combine += str(item)
+        return combine
+
+#Because the code above is too complex, I rewrite the a_star algorithm in a
+#simple way, this way is much easier to understand.
+class dfsClass():
+    def __init__(self, input):
+        self.startDigits = input['start']
+        self.topNode = Node2Astar(self.startDigits)
+        self.topNode.parent = self.topNode
+        self.topNode.depth = 0
+        targetDigits = input['final']
+        self.targetNode = Node2Astar(targetDigits)
+        self.banList = input['banList']
+
+        self.resultNode = None
+        self.target = False
+        self.check = False
+        self.dfs_openList = {self.topNode.unique():self.topNode}#check Node unique
+        self.todoList = [self.topNode]#store Node
+        self.dfs_SequenceList = [self.topNode]#store all expand Node
+
+    def testdfs(self):
+        for i in range(10000):
+            if i == 0:
+                if self.checkTop():
+                    break
+            if  self.target:
+                self.printdfsResult()
+                self.printProcess(self.dfs_SequenceList)
+                break 
+            if len(self.dfs_SequenceList) > 999 :
+                print('No solution found.')
+                self.printProcess(self.dfs_SequenceList)
+                break
+            if len(self.dfs_SequenceList) == 0 :
+                print('No solution found.')
+                self.printProcess(self.dfs_SequenceList)
+                break
+            #give a todoNode to start the explore
+
+            #print([item.digits.numberStr for item in self.todoList],'====')
+
+            if len(self.todoList) :
+                todoNode = self.todoList[-1]
+            else : 
+                print('No solution found.')
+                self.printProcess(self.dfs_SequenceList)
+                break
+            if len(self.todoList) == 1 and self.todoList[0].childs.count(False) == 0 :
+                print('No solution found.')
+                self.printProcess(self.dfs_SequenceList)
+                break
+            if not self.getdfsChild(todoNode):
+                self.todoList.pop()
+            
+    #this method is to get the six possible child of the todoNode 
+    def getdfsChild(self, todonode):
+        #print(todonode.digits.numberStr,'----',todonode.childs)
+        for i in range(6):#this is fixed
+            hasChanged = False
+            currentNumList = todonode.digits.Str2Digits()
+            if not todonode.digits.lastDigits == i//2 :
+                if i % 2 == 0:
+                    if not currentNumList[i//2] == 0 :
+                        currentNumList[i//2] -= 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+                else:
+                    if not currentNumList[i//2] == 9 :
+                        currentNumList[i//2] += 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+            if hasChanged and not int(self.getStr(currentNumList)) in self.banList:
+                newDigits = Digits(self.getStr(currentNumList))
+                newNode = Node2Astar(newDigits)
+                #this is important to give newNode lastDigit and childs informaiton
+                newNode.digits.lastDigits = i//2
+                newNode.childs[i//2] = True
+                newNode.childs[i//2+1] = True
+                newNode.depth = todonode.depth + 1
+                newNode.parent = todonode
+                #sonNodedistance = self.calculateHeuristic(newNode,self.targetNode) 
+                if newNode.digits.numberStr == self.targetNode.digits.numberStr :
+                    self.target = True
+                    self.resultNode = newNode
+                #to prevent the top node, which will lead to a circle
+                if not newNode.unique() in self.dfs_openList.keys():
+                    self.dfs_openList[newNode.unique()] = newNode
+                    self.dfs_SequenceList.append(newNode)
+                    self.todoList.append(newNode)
+                    return True
+        return False    
+
+    #this method to check the targetNode is or not the topNode, prevent some error
+    def checkTop(self):
+        if self.topNode.digits.numberStr == self.targetNode.digits.numberStr:
+            self.check = True
+        if self.check:
+            print(self.topNode.digits.numberStr) 
+            print(self.topNode.digits.numberStr) 
+            return True
+        return False
+
+    def printProcess(self, quene):
+        queneStr = ''
+        for item in quene:
+            queneStr += item.digits.numberStr+','
+        print(queneStr[:-1])
+
+    def printdfsResult(self):
+        resultStr = ''
+        resultList = []
+        judge = True
+        lastNode = self.resultNode
+        while judge :
+            resultList.append(lastNode.digits.numberStr)
+            if lastNode.unique() == self.topNode.unique() :
+                judge = False
+            lastNode = lastNode.parent
+        resultList.reverse()
+        for item in resultList:
+            resultStr += item+ ','
+        print(resultStr[:-1])
+            
+    def getStr(self, numberList):
+        combine = ''
+        for item in numberList:
+            combine += str(item)
+        return combine
+
+#Because the code above is too complex, I rewrite the a_star algorithm in a
+#simple way, this way is much easier to understand.
+class idsClass():
+    def __init__(self, input):
+        self.startDigits = input['start']
+        self.topNode = Node2Astar(self.startDigits)
+        self.topNode.parent = self.topNode
+        self.topNode.depth = 0
+        targetDigits = input['final']
+        self.targetNode = Node2Astar(targetDigits)
+        self.banList = input['banList']
+
+        self.resultNode = None
+        self.target = False
+        self.check = False
+        self.ids_openList = {self.topNode.unique():self.topNode}#check Node unique
+        self.todoList = [self.topNode]#store Node
+        self.ids_SequenceList = []#store all expand Node
+        self.preventCircle = []#record the item prevent circle
+    def testids(self):
+        for i in range(10000):
+            if i == 0:
+                if self.checkTop():
+                    break
+            if  self.target:
+                self.printidsResult()
+                self.printProcess(self.ids_SequenceList)
+                break 
+            if len(self.ids_SequenceList) > 999 :
+                print('No solution found.')
+                self.printProcess(self.ids_SequenceList)
+                break
+            #problem set up
+            self.preventCircle = []
+            self.ids_SequenceList.append(self.topNode)
+            self.ids_openList = {self.topNode.unique():self.topNode}
+            self.todoList = [self.topNode]
+            while True:
+                if len(self.todoList) :
+                    todoNode = self.todoList[-1]
+                else : 
+                    break
+                if not len(self.ids_SequenceList) > 999:
+                    if not self.getidsChild(todoNode, i):
+                        if self.target:
+                            break
+                        self.todoList.pop()
+                else:
+                    break
+            if not i == 0 and not i in [item.depth for item in self.preventCircle]:
+                print('No solution found.')
+                self.printProcess(self.ids_SequenceList)
+                break
+            
+    #this method is to get the six possible child of the todoNode 
+    def getidsChild(self, todonode, maxdepth):
+        #print(todonode.digits.numberStr,'----',todonode.childs)
+        for i in range(6):#this is fixed
+            hasChanged = False
+            currentNumList = todonode.digits.Str2Digits()
+            if not todonode.digits.lastDigits == i//2 :
+                if i % 2 == 0:
+                    if not currentNumList[i//2] == 0 :
+                        currentNumList[i//2] -= 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+                else:
+                    if not currentNumList[i//2] == 9 :
+                        currentNumList[i//2] += 1
+                        hasChanged = True
+                        todonode.childs[i] = True
+                    else:
+                        todonode.childs[i] = True
+            if hasChanged and not int(self.getStr(currentNumList)) in self.banList:
+                newDigits = Digits(self.getStr(currentNumList))
+                newNode = Node2Astar(newDigits)
+                #this is important to give newNode lastDigit and childs informaiton
+                newNode.digits.lastDigits = i//2
+                newNode.childs[i//2] = True
+                newNode.childs[i//2+1] = True
+                newNode.depth = todonode.depth + 1
+                if newNode.depth > maxdepth:
+                    return False
+                newNode.parent = todonode
+                #sonNodedistance = self.calculateHeuristic(newNode,self.targetNode) 
+                if newNode.digits.numberStr == self.targetNode.digits.numberStr :
+                    self.target = True
+                    self.ids_SequenceList.append(newNode)
+                    self.resultNode = newNode
+                    self.preventCircle.append(newNode)
+                    return False
+                #to prevent the top node, which will lead to a circle
+                if not newNode.unique() in self.ids_openList.keys():
+                    self.ids_openList[newNode.unique()] = newNode
+                    self.ids_SequenceList.append(newNode)
+                    self.todoList.append(newNode)
+                    self.preventCircle.append(newNode)
+                    return True
+        return False    
+
+    #this method to check the targetNode is or not the topNode, prevent some error
+    def checkTop(self):
+        if self.topNode.digits.numberStr == self.targetNode.digits.numberStr:
+            self.check = True
+        if self.check:
+            print(self.topNode.digits.numberStr) 
+            print(self.topNode.digits.numberStr) 
+            return True
+        return False
+
+    def printProcess(self, quene):
+        queneStr = ''
+        for item in quene:
+            queneStr += item.digits.numberStr+','
+        print(queneStr[:-1])
+
+    def printidsResult(self):
+        resultStr = ''
+        resultList = []
+        judge = True
+        lastNode = self.resultNode
+        while judge :
+            resultList.append(lastNode.digits.numberStr)
+            if lastNode.unique() == self.topNode.unique() :
+                judge = False
+            lastNode = lastNode.parent
+        resultList.reverse()
+        for item in resultList:
+            resultStr += item+ ','
+        print(resultStr[:-1])
+            
+    def getStr(self, numberList):
+        combine = ''
+        for item in numberList:
+            combine += str(item)
+        return combine
 
 if __name__ =='__main__':
     start = timeit.default_timer()
