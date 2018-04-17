@@ -59,27 +59,35 @@ class openfile:
                 length = len(wordList)//2
                 tempList = []
                 for i in range(length):                    
-                    newWord_Lable = Word_Label(wordList[i],wordList[i+length])
+                    newWord_Lable = Word_Label()
+                    newWord_Lable.word = wordList[i]
+                    newWord_Lable.label = wordList[i+length]
                     if i > 0:
                         newWord_Lable.previous = tempList[i-1]
+                    else :
+                        newWord_Lable.previous = Word_Label()
+                        newWord_Lable.previous.label = 'start'
                     tempList.append(newWord_Lable)
                 for j in range(len(tempList)-1):
                     tempList[j].next = tempList[j+1]
-                Word_Label_List.extend(tempList)
+                tempList[-1].next = Word_Label()
+                tempList[-1].next.label = 'end'
+                #Word_Label_List.extend(tempList)
+                Word_Label_List.append(tempList)
         return Word_Label_List
 
+random.seed(2)
+RRule = random.random()
 
 class Word_Label:
-    def __init__(self, word, label):
-        self.word = word
-        self.label = label
+    def __init__(self):
+        self.word = None
+        self.label = None
         self.previous = None
         self.next = None 
 
 class Binary_perceptron:
     def __init__(self, train, test, multipalTime):
-        random.seed(2)
-        self.RRule = random.random()
         self.multipalTime = multipalTime
         self.train = train
         self.test = test
@@ -90,10 +98,11 @@ class Binary_perceptron:
     def trainProcess(self):
         for i in range(self.multipalTime):
             trainData = self.train
-            random.shuffle(trainData, lambda: self.RRule)
+            random.shuffle(trainData, lambda: RRule)
             for item in trainData:
-                if not self.predict(item) == item.label:
-                    self.update(item)
+                for node in item:
+                    if not self.predict(node) == node.label:
+                        self.update(node)
         
     def predict(self, node):
         if node.word in self.weight.keys():
@@ -113,8 +122,9 @@ class Binary_perceptron:
         correct = []
         predicted = []
         for item in self.test:
-            correct.append(item.label)
-            predicted.append(self.predict(item))
+            for node in item:
+                correct.append(node.label)
+                predicted.append(self.predict(node))
         f1_micro = f1_score(correct, predicted, average='micro', labels=['ORG', 'MISC', 'PER', 'LOC'])
         print('----------------------------------------')
         print('current word-current label \nfi_micro is:',f1_micro)
@@ -132,6 +142,110 @@ class Binary_perceptron:
         LOCList = [item for item in sorted(self.weight, key = lambda i : self.weight[i]['LOC'],reverse=True)[:10]]
         print('The List of LOC top 10 is :',LOCList,)
 
+class structuredPerceptron:
+    def __init__(self, train, test, multipalTime):
+        self.multipalTime = multipalTime
+        self.train = train
+        self.test = test
+        self.weight = {'wordLabel':{},
+        'previousLabel':{'start':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
+                        ,'O':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
+                        ,'PER':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
+                        ,'LOC':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
+                        ,'ORG':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
+                        ,'MISC':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}}}
+        self.trainProcess()
+        self.testProcess()
+    
+    def trainProcess(self):
+        #for i in range(self.multipalTime):
+            trainData = self.train
+            random.shuffle(trainData, lambda: RRule)
+            for item in trainData:
+                predictstructuredLabel = self.predict(item)
+                if not predictstructuredLabel == [node.label for node in item]:
+                    self.update(item, predictstructuredLabel)
+
+    def predict(self, nodeList):
+        firstColumn = {}
+        secondColumn = {}
+        if nodeList[0].word in self.weight['wordLabel'].keys():
+            for item in self.weight['previousLabel']['start'].keys():
+                firstColumn[item] = self.weight['previousLabel']['start'][item] + self.weight['wordLabel'][nodeList[0].word][item]
+        else:
+            firstColumn = {'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
+        if len(nodeList) == 1 :
+            return [sorted(firstColumn, key = lambda i : firstColumn[i],reverse = True)[0]]
+        if nodeList[1].word in self.weight['wordLabel'].keys():
+            for item in firstColumn.keys():
+                for label in self.weight['wordLabel'][nodeList[1].word].keys():
+                    secondColumn[(item,label)] = firstColumn[item] + self.weight['wordLabel'][nodeList[1].word][label]
+            predictLabel = [item for item in sorted(secondColumn, key = lambda i: secondColumn[i], reverse = True)[0]]
+        else:
+            predictLabel = [sorted(firstColumn, key = lambda i : firstColumn[i],reverse = True)[0],'O']
+        if len(nodeList) == 2:
+            return predictLabel
+        for i in range(len(nodeList)-2):
+            predictLabel.extend(self.viterbi(i, predictLabel[-1], nodeList))
+        return predictLabel
+
+    def viterbi(self,time , previousLabel, nodeList):
+        column = {}
+        if nodeList[time+2].word in self.weight['wordLabel'].keys():
+            for label in self.weight['wordLabel'][nodeList[time+2].word].keys():
+                column[label] = self.weight['wordLabel'][nodeList[time+2].word][label] + self.weight['previousLabel'][previousLabel][label]
+            return [sorted(column, key = lambda i : column[i], reverse = True)[0]]
+        else:
+            return ['O']
+
+    def update(self, nodeList, predictLabelList):
+        nodeLabelList = [item.label for item in nodeList]
+        for i in range(len(nodeList)):
+            if nodeList[i] in self.weight['wordLabel'].keys():
+                self.weight['wordLabel'][nodeList[i]][nodeList[i].label] += 1/self.multipalTime
+                self.weight['wordLabel'][nodeList[i]][predictLabelList[i]] -= 1/self.multipalTime
+            else:
+                Labellist = {'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
+                Labellist[nodeList[i].label] += 1/self.multipalTime
+                Labellist[predictLabelList[i]] -= 1/self.multipalTime
+                self.weight['wordLabel'][nodeList[i].word] = Labellist
+        #for start
+        self.weight['previousLabel']['start'][nodeLabelList[0]] += 1/self.multipalTime
+        self.weight['previousLabel']['start'][predictLabelList[0]] -= 1/self.multipalTime
+        #print(predictLabelList)
+        for i in range(len(nodeLabelList)-1):
+            self.weight['previousLabel'][nodeLabelList[i]][nodeLabelList[i+1]] += 1/self.multipalTime
+            self.weight['previousLabel'][predictLabelList[i]][predictLabelList[i+1]] -= 1/self.multipalTime
+
+        
+        #weight = weight = {
+                        #   'wordLabel' :{'word':{'O':1,'PER':2,...,'MISC':2},}, 
+                        #   'previousLabel':{'start':{'O':1,'PER':2,...,'MISC':2},
+                        #                      ....
+                        #                     #'end' is not a previous label for anyone
+                        #       
+                        #                    }
+                        # }
+
+    def testProcess(self):
+        correct = []
+        predicted = []
+        for item in self.test:
+            labelList = self.predict(item)
+            for i in range(len(item)):
+                correct.append(item[i].label)
+                predicted.append(labelList[i])
+            
+        f1_micro = f1_score(correct, predicted, average='micro', labels=['ORG', 'MISC', 'PER', 'LOC'])
+        print('----------------------------------------')
+        print('current word-current label & previous label-current label\nfi_micro is:',f1_micro)
+        print('----------------------------------------')
+        #self.top10()
+        print('----------------------------------------')
+
+
+
+
 
 if __name__ == '__main__': 
     start = timeit.default_timer()
@@ -140,5 +254,6 @@ if __name__ == '__main__':
     openFile = openfile(config.args)
     multipalTime = 10
     bigram = Binary_perceptron(openFile.train, openFile.test, multipalTime)
+    structuredPrevious = structuredPerceptron(openFile.train, openFile.test, multipalTime)
     elapsed = timeit.default_timer() - start
     print('The program take',elapsed,'seconds to complete.')
