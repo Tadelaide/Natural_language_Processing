@@ -76,7 +76,7 @@ class openfile:
                 Word_Label_List.append(tempList)
         return Word_Label_List
 
-random.seed(2)
+random.seed(6)
 RRule = random.random()
 
 class Word_Label:
@@ -133,20 +133,19 @@ class Binary_perceptron:
         print('----------------------------------------')
 
     def top10(self):
-        ORGList = [item for item in sorted(self.weight, key = lambda i : self.weight[i]['ORG'],reverse=True)[:10]]
-        print('The List of ORG top 10 is :',ORGList)
-        MISCList = [item for item in sorted(self.weight, key = lambda i : self.weight[i]['MISC'],reverse=True)[:10]]
-        print('The List of MISC top 10 is :',MISCList)
-        PERList = [item for item in sorted(self.weight, key = lambda i : self.weight[i]['PER'],reverse=True)[:10]]
-        print('The List of PER top 10 is :',PERList)
-        LOCList = [item for item in sorted(self.weight, key = lambda i : self.weight[i]['LOC'],reverse=True)[:10]]
-        print('The List of LOC top 10 is :',LOCList,)
+        print('The List of O top 10 is :\n',[item for item in sorted(self.weight, key = lambda i : self.weight[i]['O'],reverse=True)[:10]])
+        print('The List of PER top 10 is :\n',[item for item in sorted(self.weight, key = lambda i : self.weight[i]['PER'],reverse=True)[:10]])
+        print('The List of LOC top 10 is :\n',[item for item in sorted(self.weight, key = lambda i : self.weight[i]['LOC'],reverse=True)[:10]])
+        print('The List of ORG top 10 is :\n',[item for item in sorted(self.weight, key = lambda i : self.weight[i]['ORG'],reverse=True)[:10]])
+        print('The List of MISC top 10 is :\n',[item for item in sorted(self.weight, key = lambda i : self.weight[i]['MISC'],reverse=True)[:10]])
+
 
 class structuredPerceptron:
-    def __init__(self, train, test, multipalTime):
+    def __init__(self, train, test, multipalTime, subFeatures):
         self.multipalTime = multipalTime
         self.train = train
         self.test = test
+        self.subFeatures = subFeatures
         self.weight = {'wordLabel':{},
         'previousLabel':{'start':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
                         ,'O':{'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
@@ -158,7 +157,7 @@ class structuredPerceptron:
         self.testProcess()
     
     def trainProcess(self):
-        #for i in range(self.multipalTime):
+        for i in range(self.multipalTime):
             trainData = self.train
             random.shuffle(trainData, lambda: RRule)
             for item in trainData:
@@ -201,9 +200,9 @@ class structuredPerceptron:
     def update(self, nodeList, predictLabelList):
         nodeLabelList = [item.label for item in nodeList]
         for i in range(len(nodeList)):
-            if nodeList[i] in self.weight['wordLabel'].keys():
-                self.weight['wordLabel'][nodeList[i]][nodeList[i].label] += 1/self.multipalTime
-                self.weight['wordLabel'][nodeList[i]][predictLabelList[i]] -= 1/self.multipalTime
+            if nodeList[i].word in self.weight['wordLabel'].keys():
+                self.weight['wordLabel'][nodeList[i].word][nodeList[i].label] += 1/self.multipalTime
+                self.weight['wordLabel'][nodeList[i].word][predictLabelList[i]] -= 1/self.multipalTime
             else:
                 Labellist = {'O': 0, 'PER': 0, 'LOC': 0, 'ORG': 0, 'MISC': 0}
                 Labellist[nodeList[i].label] += 1/self.multipalTime
@@ -230,20 +229,31 @@ class structuredPerceptron:
     def testProcess(self):
         correct = []
         predicted = []
+        top10 = {'O': [], 'PER': [], 'LOC': [], 'ORG': [], 'MISC': []}
         for item in self.test:
             labelList = self.predict(item)
             for i in range(len(item)):
                 correct.append(item[i].label)
                 predicted.append(labelList[i])
+                top10[labelList[i]].append(item[i].word)
             
         f1_micro = f1_score(correct, predicted, average='micro', labels=['ORG', 'MISC', 'PER', 'LOC'])
         print('----------------------------------------')
         print('current word-current label & previous label-current label\nfi_micro is:',f1_micro)
         print('----------------------------------------')
-        #self.top10()
+        print('The List of O top 10 is : \n',[item for item in sorted(Counter(top10['O']), key = lambda i : Counter(top10['O'])[i], reverse = True)[:10]])
+        print('The List of PER top 10 is : \n',[item for item in sorted(Counter(top10['PER']), key = lambda i : Counter(top10['PER'])[i], reverse = True)[:10]])
+        print('The List of LOC top 10 is : \n',[item for item in sorted(Counter(top10['LOC']), key = lambda i : Counter(top10['LOC'])[i], reverse = True)[:10]])
+        print('The List of ORG top 10 is : \n',[item for item in sorted(Counter(top10['ORG']), key = lambda i : Counter(top10['ORG'])[i], reverse = True)[:10]])
+        print('The List of MISC top 10 is : \n',[item for item in sorted(Counter(top10['MISC']), key = lambda i : Counter(top10['MISC'])[i], reverse = True)[:10]])
         print('----------------------------------------')
 
 
+    def numberJudge(self, node):
+        for item in node.word:
+            if item.isdigit():
+                return True
+        return False
 
 
 
@@ -254,6 +264,7 @@ if __name__ == '__main__':
     openFile = openfile(config.args)
     multipalTime = 10
     bigram = Binary_perceptron(openFile.train, openFile.test, multipalTime)
-    structuredPrevious = structuredPerceptron(openFile.train, openFile.test, multipalTime)
+    subFeatures = {'number':False}
+    structuredPrevious = structuredPerceptron(openFile.train, openFile.test, multipalTime, subFeatures)
     elapsed = timeit.default_timer() - start
     print('The program take',elapsed,'seconds to complete.')
