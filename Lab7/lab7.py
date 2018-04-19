@@ -6,7 +6,7 @@ USE: python <PROGNAME>  train.txt test.txt
 OPTIONS:
     -h : print this help message
     
-Created on Thu Feb 15 2018
+Created on Thu Apr 15 2018
 
 @author: wlt
 ------------------------------------------------------------\
