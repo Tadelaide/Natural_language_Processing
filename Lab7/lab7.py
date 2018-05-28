@@ -167,6 +167,7 @@ class structuredPerceptronLabel:
             trainData = self.train
             random.shuffle(trainData, lambda: RRule)
             for item in trainData:
+                # print(item)
                 predictstructuredLabel = self.predict(item)
                 if not predictstructuredLabel == [node.label for node in item]:
                     self.update(item, predictstructuredLabel)
